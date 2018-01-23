@@ -10,5 +10,8 @@
     "socket.io": "^2.0.4"
   },
   "devDependencies": {},
-  "main": "index.js"
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  }
 }
