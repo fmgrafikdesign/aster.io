@@ -10,7 +10,5 @@
     "socket.io": "^2.0.4"
   },
   "devDependencies": {},
-  "scripts": {
-    "build": "webpack --config webpack.config.js"
-  }
+  "main": "index.js"
 }
