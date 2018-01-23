@@ -187,6 +187,7 @@ strong {
     height: 2rem;
     width: 2rem;
     float: left;
+    cursor: pointer;
 }
 
 .text-input {

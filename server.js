@@ -46,6 +46,8 @@ var SHIP_ACCELERATION = 5; // Acceleration of ship
 var SHIP_TURNRATE = 3; // Turnrate of ship
 
 var SHIP_SIZE = 48;
+var SHIP_RESPAWN_TIME = 2000; // in milliseconds
+var SHIP_SPAWN_PROTECTION = 120;
 
 var POINTS_PER_KILL = 100;
 var POINTS_PER_DEATH = -50;
@@ -155,7 +157,7 @@ io.on('connection', function(socket) {
         };
 
 
-        socket.emit('acknowledge new player', [SHOT_SPEED, SHOT_LIFESPAN]);
+        socket.emit('acknowledge new player', [SHOT_SPEED, SHOT_LIFESPAN, SHIP_RESPAWN_TIME]);
         //socket.emit('game state players', game.ships);
 
         // Add ship to the server
@@ -467,7 +469,7 @@ GameServer.prototype = {
 
                 var check = ship.item.bounds.contains(shot.bullet.position)
                 //console.log(check);
-                if(check) {
+                if(check && !ship.isDieing()) {
                     console.log(ship.name + ' hit by ' + shot.owner);
                     ship.hitBy(shot.owner);
                 }
@@ -607,7 +609,7 @@ function Scoreboard() {
             player.score += points;
             player.kills += kills;
             player.deaths += deaths;
-            console.log(player);
+            //console.log(player);
 
             //Send score to clients
             io.emit('scoreboard update player', player);
@@ -724,16 +726,26 @@ function Ship(options) {
             this.destroyedShip.visible = true;
             this.item.visible = false;
             this.stop();
-            this.item.position = paper.view.center;
+            //this.item.position = paper.view.center;
             this.dying = true;
+            this.respawn();
         },
 
-        destroyed: function() {
-            this.item.visible = true;
-            this.stop();
-            this.item.position = paper.view.center;
-            this.dying = false;
-            this.destroyedShip.visible = false;
+        isDieing: function() {
+            return this.dying;
+        },
+
+        respawn: function() {
+            var ship = this;
+            hit = false;
+            setTimeout(function() {
+                console.log('ship respawned');
+                ship.item.visible = true;
+                ship.stop();
+                ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
+                ship.dying = false;
+                ship.destroyedShip.visible = false;
+            }, SHIP_RESPAWN_TIME);
         },
 
         checkCollisions: function() {
@@ -835,6 +847,7 @@ function Shot(args) {
                     this.bullet.remove();
                 } else {
                     this.bullet.position = this.bullet.position.add(this.bullet.data.vector);
+                    keepInView(this.bullet);
                     //console.log(this.bullet.position);
                     //checkHits(bullet);
                     //keepInView(bullet);

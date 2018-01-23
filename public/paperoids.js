@@ -7,6 +7,7 @@ var FIRE = 4;
 
 var SHOT_LIFESPAN = 180;
 var SHOT_SPEED = 8;
+var SHIP_RESPAWN_TIME = 2000;
 
 var presets = {
     speed: 0.2,
@@ -23,6 +24,7 @@ socket.on('acknowledge new player', function(info) {
     $('#shipinfo').fadeOut(200);
     SHOT_SPEED = info[0];
     SHOT_LIFESPAN = info[1];
+    SHIP_RESPAWN_TIME = info[2];
 });
 
 socket.on('game state ships', function(ships) {
@@ -460,15 +462,16 @@ function rgb2hex(rgb){
 
 function onKeyDown(event) {
     //console.log(event);
-    if (event.key === 'left' && !event.event.repeat) {
+    if ((event.key === 'left' || event.key === 'a') && !event.event.repeat) {
         socket.emit('player movement', LEFT);
+        console.log('left');
         return move_left = true;
     }
-    if (event.key === 'right' && !event.event.repeat) {
+    if ((event.key === 'right' || event.key === 'd') && !event.event.repeat) {
         socket.emit('player movement', RIGHT);
         return move_right = true;
     }
-    if (event.key === 'up' && !event.event.repeat) {
+    if ((event.key === 'up' || event.key === 'w') && !event.event.repeat) {
         socket.emit('player movement', UP);
         return move_up = true;
     }
@@ -484,16 +487,16 @@ function onKeyDown(event) {
 
 // Stop left and right keyboard events from propagating.
 function onKeyUp(event) {
-    if (event.key === 'left' && !event.event.repeat) {
+    if ((event.key === 'left' || event.key === 'a') && !event.event.repeat) {
         socket.emit('player movement stop', LEFT);
         //console.log("left");
         return move_left = true;
     }
-    if (event.key === 'right' && !event.event.repeat) {
+    if ((event.key === 'right' || event.key === 'd') && !event.event.repeat) {
         socket.emit('player movement stop', RIGHT);
         return move_right = true;
     }
-    if (event.key === 'up' && !event.event.repeat) {
+    if ((event.key === 'up' || event.key === 'w') && !event.event.repeat) {
         socket.emit('player movement stop', UP);
         return move_up = true;
     }
@@ -706,27 +709,36 @@ function Ship(options) {
         },
 
         hitBy: function(id) {
-            this.item.strokeColor = "red";
+            //this.item.strokeColor = "red";
             this.destroy();
         },
 
         destroy: function() {
             this.destroyedShip = assets.destroyedShip.clone();
-            this.destroyedShip.strokeColor = this.color;
             this.destroyedShip.position = this.item.position;
             this.destroyedShip.visible = true;
+            this.destroyedShip.strokeColor = this.color;
             this.item.visible = false;
             this.stop();
-            this.item.position = view.center;
+            //this.item.position = paper.view.center;
             this.dying = true;
+            this.respawn();
         },
 
-        destroyed: function() {
-            this.item.visible = true;
-            this.stop();
-            this.item.position = view.center;
-            this.dying = false;
-            this.destroyedShip.visible = false;
+        respawn: function() {
+            var ship = this;
+            setTimeout(function() {
+                ship.item.visible = true;
+                //ship.stop();
+                //ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
+                ship.dying = false;
+                ship.destroyedShip.visible = false;
+                ship.setColor(ship.color);
+            }, SHIP_RESPAWN_TIME + 10);
+        },
+
+        setColor: function(color) {
+            group.strokeColor = color;
         },
 
         checkCollisions: function() {
@@ -748,10 +760,10 @@ function Ship(options) {
 
                 var ship = this;
 
-                setTimeout(function() {
-                    ship.destroyed();
-                    ship.item.remove();
-                }, 2000);
+                // setTimeout(function() {
+                //     ship.destroy();
+                //     ship.item.remove();
+                // }, 2000);
             }
 
         }
@@ -815,6 +827,7 @@ function Shot(args) {
                 this.bullet.remove();
             } else {
                 this.bullet.position = this.bullet.position.add(this.bullet.data.vector);
+                keepInView(this.bullet);
                 //console.log(this.bullet.position);
                 //checkHits(bullet);
                 //keepInView(bullet);
