@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Socket.IO chat</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<style>
+
+</style>
+
+<ul id="messages"></ul>
+<form action="">
+    <input id="m" autocomplete="off"/>
+    <button>Send</button>
+</form>
+
+<canvas id="firstCanvas" resize></canvas>
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script
+        src="https://code.jquery.com/jquery-3.2.1.min.js"
+        integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+        crossorigin="anonymous"></script>
+
+
+<script>
+    $(function() {
+        var socket = io();
+        $('form').submit(function() {
+            socket.emit('chat message', $('#m').val());
+            $('#m').val('');
+            return false;
+        });
+
+        $('input').on('input', function() {
+            socket.emit('is typing');
+        })
+
+        socket.on('chat message', function(msg) {
+            $('#messages').append($('<li>').text(msg));
+        });
+
+        socket.on('is typing', function() {
+            $('#messages').append($('<li>').text('user is typign...'));
+        });
+    });
+</script>
+</body>
+</html>
