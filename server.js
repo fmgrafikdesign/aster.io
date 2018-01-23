@@ -5,6 +5,9 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var paper = require('paper');
 
+var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
+    ip = process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+
 try {
     console.log(require.resolve("paper"));
     console.log('paper found');
@@ -22,7 +25,7 @@ app.use('/paper', express.static(__dirname + '/node_modules/paper/dist/'));
 app.use('/js', express.static(__dirname + '/node_modules/'));
 
 http.listen(3000, function() {
-    console.log('listening on *:3000');
+    console.log('Server running on http://%s:%s', ip, port);
 });
 
 //console.log(paper.Group);
