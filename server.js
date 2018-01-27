@@ -26,7 +26,7 @@ app.use('/paper', express.static(__dirname + '/node_modules/paper/dist/'));
 app.use('/js', express.static(__dirname + '/node_modules/'));
 
 http.listen(port, function() {
-    console.log('Server running on port %s', ip, port);
+    console.log('Server running on port %s', port);
 });
 
 //console.log(paper.Group);
