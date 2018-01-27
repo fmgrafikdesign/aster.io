@@ -5,8 +5,9 @@ var http = require('http').Server(app);
 var io = require('socket.io')(http);
 var paper = require('paper');
 
-var port = process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 3000,
-    ip = process.env.IP || process.env.OPENSHIFT_NODEJS_IP || '127.0.0.1';
+// Use this port for the webserver, as per uberspace guidelines
+// https://wiki.uberspace.de/system:ports
+var port = 61555;
 
 try {
     console.log(require.resolve("paper"));
@@ -24,8 +25,8 @@ app.use(express.static('public'));
 app.use('/paper', express.static(__dirname + '/node_modules/paper/dist/'));
 app.use('/js', express.static(__dirname + '/node_modules/'));
 
-http.listen(3000, function() {
-    console.log('Server running on http://%s:%s', ip, port);
+http.listen(port, function() {
+    console.log('Server running on port %s', ip, port);
 });
 
 //console.log(paper.Group);
