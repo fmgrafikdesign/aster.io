@@ -94,6 +94,72 @@ function toRadians (angle) {
     return angle * (Math.PI / 180);
 }
 
+function rgb2hex(rgb){
+    rgb = rgb.match(/^rgba?[\s+]?\([\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?/i);
+    return (rgb && rgb.length === 4) ? "#" +
+        ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : '';
+}
+
+function minimumBrightness(h,s,l, min) {
+    return [h,s,Math.max(l, min)]
+}
+
+function hsvToRgb(h, s, v) {
+    var r, g, b;
+
+    var i = Math.floor(h * 6);
+    var f = h * 6 - i;
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+
+    return [ r * 255, g * 255, b * 255 ];
+}
+
+function hexToRgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+    } : null;
+}
+
+function rgbToHsv(r, g, b) {
+    r /= 255, g /= 255, b /= 255;
+
+    var max = Math.max(r, g, b), min = Math.min(r, g, b);
+    var h, s, v = max;
+
+    var d = max - min;
+    s = max == 0 ? 0 : d / max;
+
+    if (max == min) {
+        h = 0; // achromatic
+    } else {
+        switch (max) {
+            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / d + 2; break;
+            case b: h = (r - g) / d + 4; break;
+        }
+
+        h /= 6;
+    }
+
+    return [ h, s, v ];
+}
+
 function serializeShip(ship) {
 
     var serialized = {
@@ -138,6 +204,7 @@ io.on('connection', function(socket) {
         SHOT_LIFESPAN : SHOT_LIFESPAN,
         SHIP_RESPAWN_TIME : SHIP_RESPAWN_TIME,
         SHIP_SPAWN_PROTECTION : SHIP_SPAWN_PROTECTION,
+        SHIP_SIZE: SHIP_SIZE,
         map_width : map_width,
         map_height: map_height
     };
@@ -157,9 +224,23 @@ io.on('connection', function(socket) {
         console.log('new player "' + player.name + '" connected.');
         //console.log(player.ship);
 
+        // Give color a minimum lightness to prevent exploiting dark, hardly visible ships
+        var color = player.color;
+        color = hexToRgb(color);
+        console.log('rgb', color);
+        color = rgbToHsv(color.r, color.g, color.b);
+        console.log('hsv', color);
+        color = minimumBrightness(color[0]*360, color[1]*100, color[2]*100, 30);
+        console.log('hsv minimum Brightness', color);
+        color = hsvToRgb(color[0]/360, color[1]/100, color[2]/100);
+        color = [Math.floor(color[0]), Math.floor(color[1]), Math.floor(color[2])];
+        color = rgb2hex('rgb('+color[0]+', '+color[1]+', '+color[2]+')');
+
+        // This color conversion is cancer.
+
         var ship = {
             id: socket.id,
-            color: player.color,
+            color: color,
             name: player.name,
             group: player.ship,
             movement: {
@@ -184,7 +265,7 @@ io.on('connection', function(socket) {
         game.addShip(ship);
 
         // Add player to scoreboard
-        score.addPlayer(socket.id, player.name, player.color);
+        score.addPlayer(socket.id, player.name, color);
 
         // console.log('server angle: ' + ship.angle);
 
@@ -209,9 +290,6 @@ io.on('connection', function(socket) {
 
     });
 
-    socket.on('tapstart', function() {
-        console.log('User tapped #myElement');
-    });
 
     socket.on('player movement stop', function(dir) {
         //console.log('received player ' + socket.id + ' movement: ' + movement.up + ' ' + movement.down + ' ' + movement.left + ' ' + movement.right + ' ' + movement.shooting);
@@ -221,10 +299,6 @@ io.on('connection', function(socket) {
         //console.log('player ' + socket.id + ' stopped going ' + dir);
         game.updateShipMovement(socket.id, dir, false);
 
-    });
-
-    socket.on('tapend', function() {
-        console.log('User stopped tapping #myElement');
     });
 
 
@@ -339,10 +413,15 @@ GameServer.prototype = {
             return false;
         }
 
+        var vector = new paper.Point({
+            angle: ship.angle,
+            length: (SHIP_SIZE / 2) - 3
+        });
+
         var shot = {
             owner: ship.id,
             color: ship.color,
-            position: ship.item.position,
+            position: ship.item.position.add(vector),
             angle: ship.angle,
         }
         this.shots.push(new Shot(shot));
@@ -656,9 +735,9 @@ function Ship(options) {
     //path.closed = true;
     //var thrust = new paper.Path([-8, -4], [-14, 0], [-8, 4]);
     var group = new paper.Group(path);
-    console.log(group.bounds.width);
+    //console.log(group.bounds.width);
     group = normalizeGroup(group);
-    console.log(group.bounds.width);
+    //console.log(group.bounds.width);
 
     group.applyMatrix = false;
     //console.log(options.ship);

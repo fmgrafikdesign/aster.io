@@ -9,6 +9,7 @@ var SHOT_LIFESPAN = 180;
 var SHOT_SPEED = 8;
 var SHIP_RESPAWN_TIME = 2000;
 var SHIP_SPAWN_PROTECTION = 3000;
+var SHIP_SIZE = 48;
 
 var RENDER_STARS = false;
 var ANIMATE_STARS = false;
@@ -42,6 +43,7 @@ socket.on('game state variables', function(info) {
     SHOT_LIFESPAN = info.SHOT_LIFESPAN;
     SHIP_RESPAWN_TIME = info.SHIP_RESPAWN_TIME;
     SHIP_SPAWN_PROTECTION = info.SHIP_SPAWN_PROTECTION;
+    SHIP_SIZE = info.SHIP_SIZE;
     map_width = info.map_width;
     map_height = info.map_height;
     //console.log(SHIP_SPAWN_PROTECTION);
@@ -89,10 +91,15 @@ socket.on('shot added', function(shipid) {
         }
     });
 
+    var vector = new Point({
+        angle: shooter.angle,
+        length: (SHIP_SIZE / 2) - 3
+    });
+
     var shot = {
         owner: shooter.id,
         color: shooter.color,
-        position: shooter.position,
+        position: shooter.position.add(vector),
         angle: shooter.angle
     };
 
@@ -542,6 +549,31 @@ function rgb2hex(rgb){
         ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : '';
 }
 
+function minimumBrightness(h,s,l, min) {
+    return [h,s,Math.max(l, min)]
+}
+
+function hsvToRgb(h, s, v) {
+    var r, g, b;
+
+    var i = Math.floor(h * 6);
+    var f = h * 6 - i;
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+
+    switch (i % 6) {
+        case 0: r = v, g = t, b = p; break;
+        case 1: r = q, g = v, b = p; break;
+        case 2: r = p, g = v, b = t; break;
+        case 3: r = p, g = q, b = v; break;
+        case 4: r = t, g = p, b = v; break;
+        case 5: r = v, g = p, b = q; break;
+    }
+
+    return [ r * 255, g * 255, b * 255 ];
+}
+
 function onKeyDown(event) {
     //console.log(event);
     if ((event.key === 'left' || event.key === 'a') && !event.event.repeat) {
@@ -596,7 +628,7 @@ $(document).ready( function() {
     // Stop left and right keyboard events from propagating.
 
     $(document).keydown(function(e) {
-        if(e.key === 'h') {
+        if(e.key === 'F8') {
             $('#setup').fadeToggle(200);
         }
     });
@@ -660,7 +692,28 @@ $(document).ready( function() {
         colorScheme: 'dark',
         color: '21ebeb',
         onSubmit:function(hsb,hex,rgb,el) {
-            $(el).css('background-color', '#'+hex);
+            //console.log(hsb);
+            // Give the selected color a minimum brightness to prevent exploiting black, nonvisible ships
+            var adjusted = minimumBrightness(hsb.h, hsb.s, hsb.b, 30);
+            //console.log('minimumBrightness:');
+            //console.log(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
+            adjusted = hsvToRgb(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
+            //console.log('hsvToRgb result:');
+            //console.log (adjusted);
+            adjusted = [Math.floor(adjusted[0]), Math.floor(adjusted[1]), Math.floor(adjusted[2])];
+            //console.log(adjusted);
+            //console.log('Initial RGB:');
+            //console.log(rgb);
+            adjusted = rgb2hex('rgb('+adjusted[0]+', '+adjusted[1]+', '+adjusted[2]+')');
+            //console.log(adjusted);
+            //console.log('rgb('+adjusted[0]+', '+adjusted[1]+', '+adjusted[2]+')');
+            //console.log(colorpicker.css('background-color'))
+            //console.log('hex:');
+            //console.log(adjusted);
+
+            /* Boah war das ätzend */
+
+            $(el).css('background-color', adjusted);
             $(el).colpickHide();
         }
     });
@@ -676,6 +729,7 @@ $(document).ready( function() {
         }
         player.name = $('#playername').val();
         player.color = rgb2hex(colorpicker.css('background-color'));
+        //console.log(colorpicker.css('background-color'))
         $('#playerinfo').fadeOut(200, function() {
             $('#shipinfo').fadeIn(200);
         });
@@ -694,10 +748,6 @@ $(document).ready( function() {
         //console.log(JSON.stringify(player));
 
     });
-
-
-
-    //TODO: Check ship color to have at least a certain amount of brightness
 
 });
 
@@ -742,7 +792,7 @@ function Ship(options) {
         protectionCircle: protectionCircle,
         item: group,
         name: options.name,
-        angle: options.angle,
+        //angle: options.angle,
         color: options.color,
         movement: options.movement,
         id: options.id,
@@ -809,7 +859,10 @@ function Ship(options) {
 
         turnTo: function(angle) {
             //this.angle = angle;
-            group.rotation = angle;
+
+            //group.rotation = angle;
+            this.item.rotation = angle;
+
             //this.angle = angle/2;
             //console.log(angle);
             //keepInView(group);

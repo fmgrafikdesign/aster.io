@@ -262,14 +262,12 @@ $(document).ready(function () {
 
     $('#shoot-button').on('tapstart', function (e) {
         $(this).addClass('active');
-        console.log('User tapped #myElement');
         socket.emit('player movement', FIRE);
 
     });
 
     $('#shoot-button').on('tapend', function () {
         $(this).removeClass('active');
-        console.log('User stopped tapping #myElement');
         socket.emit('player movement stop', FIRE);
     });
 
