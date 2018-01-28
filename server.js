@@ -21,7 +21,11 @@ app.get('/', function(req, res) {
     res.sendFile(__dirname + '/paperoids.html');
 });
 
-app.use(express.static('public'));
+app.get('/mobile', function(req, res) {
+    res.sendFile(__dirname + '/mobile.html');
+});
+
+app.use('/', express.static(__dirname + '/public/'));
 app.use('/paper', express.static(__dirname + '/node_modules/paper/dist/'));
 app.use('/js', express.static(__dirname + '/node_modules/'));
 
@@ -42,13 +46,13 @@ var SHOT_DELAY = 12; // delay between shots
 var SHOT_SPEED = 5; // How many px does a shot move per tick
 var SHOT_LIFESPAN = 120; // How long a shot lives
 
-var SHIP_TOPSPEED = 120 / 60; // Topspeed of ship
-var SHIP_ACCELERATION = 5; // Acceleration of ship
+var SHIP_TOPSPEED = 8; // Topspeed of ship
+var SHIP_ACCELERATION = 0.2; // Acceleration of ship
 var SHIP_TURNRATE = 3; // Turnrate of ship
 
 var SHIP_SIZE = 48;
 var SHIP_RESPAWN_TIME = 2000; // in milliseconds
-var SHIP_SPAWN_PROTECTION = 120;
+var SHIP_SPAWN_PROTECTION = 3000; // in milliseconds
 
 var POINTS_PER_KILL = 100;
 var POINTS_PER_DEATH = -50;
@@ -123,11 +127,27 @@ io.on('connection', function(socket) {
 
     socket.emit('game state ships', shipsToPlayer);
 
-    console.log(score.getPlayers());
+    //console.log(score.getPlayers());
     score.getPlayers().forEach(function(player) {
         //console.log('+1');
         socket.emit('scoreboard add player', player);
     });
+
+    var gameinfo = {
+        SHOT_SPEED : SHOT_SPEED,
+        SHOT_LIFESPAN : SHOT_LIFESPAN,
+        SHIP_RESPAWN_TIME : SHIP_RESPAWN_TIME,
+        SHIP_SPAWN_PROTECTION : SHIP_SPAWN_PROTECTION,
+        map_width : map_width,
+        map_height: map_height
+    };
+
+    socket.emit('game state variables', gameinfo);
+
+    socket.on('debug message', function(message) {
+        console.log(message);
+    });
+
 
     socket.on('new player', function(player) {
 
@@ -157,8 +177,7 @@ io.on('connection', function(socket) {
             speed: 0
         };
 
-
-        socket.emit('acknowledge new player', [SHOT_SPEED, SHOT_LIFESPAN, SHIP_RESPAWN_TIME]);
+        socket.emit('acknowledge new player');
         //socket.emit('game state players', game.ships);
 
         // Add ship to the server
@@ -190,6 +209,10 @@ io.on('connection', function(socket) {
 
     });
 
+    socket.on('tapstart', function() {
+        console.log('User tapped #myElement');
+    });
+
     socket.on('player movement stop', function(dir) {
         //console.log('received player ' + socket.id + ' movement: ' + movement.up + ' ' + movement.down + ' ' + movement.left + ' ' + movement.right + ' ' + movement.shooting);
 
@@ -198,6 +221,10 @@ io.on('connection', function(socket) {
         //console.log('player ' + socket.id + ' stopped going ' + dir);
         game.updateShipMovement(socket.id, dir, false);
 
+    });
+
+    socket.on('tapend', function() {
+        console.log('User stopped tapping #myElement');
     });
 
 
@@ -228,7 +255,9 @@ GameServer.prototype = {
 
     // Add ship on player entrance
     addShip: function(ship) {
-        this.ships.push(new Ship(ship));
+        var newship = new Ship(ship);
+        newship.spawnProtection();
+        this.ships.push(newship);
         //console.log(ship);
     },
 
@@ -306,7 +335,7 @@ GameServer.prototype = {
     addShot: function(ship) {
 
         // If the ship is dieing or dead you can't fire
-        if(ship.dying) {
+        if(ship.dying || ship.isInvincible()) {
             return false;
         }
 
@@ -470,7 +499,7 @@ GameServer.prototype = {
 
                 var check = ship.item.bounds.contains(shot.bullet.position)
                 //console.log(check);
-                if(check && !ship.isDieing()) {
+                if(check && !ship.isDieing() && !ship.isInvincible()) {
                     console.log(ship.name + ' hit by ' + shot.owner);
                     ship.hitBy(shot.owner);
                 }
@@ -491,9 +520,7 @@ GameServer.prototype = {
             ships_position.push([
                 ship.id,
                 Math.round(ship.item.position.x),
-                //ship.item.position.x,
                 Math.round(ship.item.position.y),
-                //ship.item.position.y,
                 ship.angle
             ]);
             //console.log('updated angle: ' + ship.angle);
@@ -538,6 +565,11 @@ var assets = {
         explosionPath.fillColor = 'white';
         explosionPath.strokeColor = null;
         return new paper.SymbolDefinition(explosionPath);
+    },
+    spawnProtection: new function() {
+        var circle = new paper.Path.Circle(new paper.Point(), 20);
+        circle.visible = false;
+        return circle;
     }
 };
 
@@ -628,7 +660,7 @@ function Ship(options) {
     group = normalizeGroup(group);
     console.log(group.bounds.width);
 
-    //group.applyMatrix = false;
+    group.applyMatrix = false;
     //console.log(options.ship);
     //var group = new paper.Group().importJSON(options.group);
     //console.log(group);
@@ -637,10 +669,10 @@ function Ship(options) {
     //group.position = new paper.Point(options.pos.x, options.pos.y);
     //console.log(group.position.x + ', ' + group.position.y);
     var hit = false;
+
     //var id = options.id;
     return {
         item: group,
-
         angle: options.angle,
         color: options.color,
         movement: options.movement,
@@ -654,13 +686,15 @@ function Ship(options) {
         }),
 
         turnLeft: function() {
-            group.rotate(-3);
-            this.angle -= 3;
+            group.rotate(-SHIP_TURNRATE);
+            this.angle -= SHIP_TURNRATE;
+            //console.log('group.rotation = ' + group.rotation + ', this.angle = ' + this.angle);
         },
 
         turnRight: function() {
-            group.rotate(3);
-            this.angle += 3;
+            group.rotate(SHIP_TURNRATE);
+            this.angle += SHIP_TURNRATE;
+            //console.log('group.rotation = ' + group.rotation + ', this.angle = ' + this.angle);
         },
 
         thrust: function() {
@@ -668,12 +702,16 @@ function Ship(options) {
 
             this.vector = this.vector.add(new paper.Point({
                 angle: this.angle,
-                length: presets.speed
+                length: SHIP_ACCELERATION
             }));
             //console.log(this.vector);
-            if (this.vector.length > 8) {
-                this.vector.length = 8;
+            if (this.vector.length > SHIP_TOPSPEED) {
+                this.vector.length = SHIP_TOPSPEED;
             }
+        },
+
+        isInvincible: function() {
+            return this.invincible;
         },
 
         stop: function() {
@@ -736,17 +774,42 @@ function Ship(options) {
             return this.dying;
         },
 
+        isProtected: function() {
+            return this.dying;
+        },
+
         respawn: function() {
             var ship = this;
             hit = false;
             setTimeout(function() {
-                console.log('ship respawned');
+                //console.log('ship respawned');
                 ship.item.visible = true;
                 ship.stop();
                 ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
                 ship.dying = false;
                 ship.destroyedShip.visible = false;
+
+                //Activate spawn protection
+                ship.spawnProtection();
+
+
             }, SHIP_RESPAWN_TIME);
+        },
+
+        spawnProtection: function() {
+            this.invincible = true;
+            this.spawnProtectionCircle = assets.spawnProtection.clone();
+            this.spawnProtectionCircle.position = this.item.position;
+            this.spawnProtectionCircle.visible = true;
+            var ship = this;
+
+            //Deactivate after x seconds
+            setTimeout(function() {
+                ship.invincible = false;
+                ship.spawnProtectionCircle.visible = false;
+                console.log('spawn protection deactivated');
+            }, SHIP_SPAWN_PROTECTION);
+            return console.log('spawn protection activated');
         },
 
         checkCollisions: function() {

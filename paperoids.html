@@ -4,19 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <title>Paperoids</title>
-    <link rel="stylesheet" href="style.css">
+    <!-- If you are a phone, get redirected to the controller page -->
+    <!-- /phone -->
+
+    <link rel="stylesheet" href="style.css" type="text/css">
     <link href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:200,300,400,600,700" rel="stylesheet">
     <script type="text/javascript" src="/paper/paper-full.js"></script>
     <script type="text/javascript" src="/js/jquery/dist/jquery.min.js"></script>
     <script type="text/javascript" src="/js/jquery-colpick/js/colpick.js"></script>
-    <link rel="stylesheet" href="/js/jquery-colpick/css/colpick.css">
+    <link rel="stylesheet" href="/js/jquery-colpick/css/colpick.css" type="text/css">
     <script src="/socket.io/socket.io.js"></script>
     <script type="text/paperscript" src="paperoids.js" canvas="canvas"></script>
     <script type="text/paperscript" src="drawship.js" canvas="customship"></script>
-    <script type="text/paperscript" src="app.js" canvas="canvas"></script>
 </head>
+
+<script type="text/javascript">
+    <!--
+    if (screen.width <= 699 || document.documentElement.clientWidth <= 699) {
+        //alert('redirect incoming');
+        document.location = "mobile";
+    }
+    //-->
+</script>
+
 <body>
     <canvas id="canvas" width="1920" resize height="1080"></canvas>
+
+    <!-- Stars via css -->
+
+    <div class="background">
+        <div class="stars"></div>
+        <div class="twinkling"></div>
+    </div>
+
+
     <div id="setup" class="setup">
         <div id="playerinfo" class="playerinfo setup-box">
             <h1>Welcome to <strong>aster.io</strong></h1>
@@ -51,6 +72,5 @@
     </div>
     <!--<div id="footer" class="footer"><a href=#">Paperoids</a>.  To Play: <b>&#8592;</b> and <b>&#8594;</b> to rotate.  <b>&#8593;</b> for thrust.  <b>Z</b> to fire. <b>F</b> to show FPS. Follow @<a href="http://twitter.com/#/hirmes">hirmes</a> for updates. Made with the amazing <a href="http://paperjs.org">Paper.js</a></div> -->
 
-    <div id="gameover" class="gameover">Game Over.  <a href="/">Play again</a>?</div>
 </body>
 </html>

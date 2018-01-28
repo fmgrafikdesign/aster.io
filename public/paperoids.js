@@ -8,6 +8,17 @@ var FIRE = 4;
 var SHOT_LIFESPAN = 180;
 var SHOT_SPEED = 8;
 var SHIP_RESPAWN_TIME = 2000;
+var SHIP_SPAWN_PROTECTION = 3000;
+
+var RENDER_STARS = false;
+var ANIMATE_STARS = false;
+var STARS_AMOUNT = 400;
+var STARS_SIZE = 2;
+
+var SHOW_PLAYERNAMES = true;
+
+var map_width = 1920;
+var map_height = 1080;
 
 var presets = {
     speed: 0.2,
@@ -20,15 +31,27 @@ var presets = {
 var socket = io();
 
 socket.on('acknowledge new player', function(info) {
-    console.log('server acknowledged you');
+    //console.log('server acknowledged you');
     $('#shipinfo').fadeOut(200);
-    SHOT_SPEED = info[0];
-    SHOT_LIFESPAN = info[1];
-    SHIP_RESPAWN_TIME = info[2];
+});
+
+socket.on('game state variables', function(info) {
+    //console.log('game vars updated');
+    //console.log(info);
+    SHOT_SPEED = info.SHOT_SPEED;
+    SHOT_LIFESPAN = info.SHOT_LIFESPAN;
+    SHIP_RESPAWN_TIME = info.SHIP_RESPAWN_TIME;
+    SHIP_SPAWN_PROTECTION = info.SHIP_SPAWN_PROTECTION;
+    map_width = info.map_width;
+    map_height = info.map_height;
+    //console.log(SHIP_SPAWN_PROTECTION);
+    if(RENDER_STARS) {
+        renderSky();
+    }
 });
 
 socket.on('game state ships', function(ships) {
-    console.log('game state updated');
+    //console.log('game state updated');
     //client.ships = ships;
     //console.log(ships);
     ships.forEach(function(ship) {
@@ -91,7 +114,9 @@ function addShip(ship) {
 
     console.log('received angle ' + ship.angle);
 
-    var newship = client.ships.push(new Ship(ship));
+    var newship = new Ship(ship);
+    newship.spawnProtection();
+    client.ships.push(newship);
     //console.log(newship);
 
     //var path = new Path([-10, -8], [10, 0], [-10, 8], [-8, 4], [-8, -4]);
@@ -109,6 +134,8 @@ function removePlayer(id) {
     client.ships.forEach(function(ship, i) {
         if(ship.id === id) {
             client.ships[i].item.remove();
+            client.ships[i].playername.remove();
+            client.ships[i].protectionCircle.remove();
             client.ships.splice(i, 1);
             console.log('player removed');
         }
@@ -136,6 +163,51 @@ function initialize() {
 
 function toRadians (angle) {
     return angle * (Math.PI / 180);
+}
+
+stars = false;
+function renderSky() {
+    var i = 0;
+    var sky = new paper.Group([]);
+    while(i < STARS_AMOUNT) {
+        // size is between 1 and 2.5
+        var size = Math.random() *1.5 + 1;
+        var star = new paper.Path.Circle({
+            center: [Math.random() * map_width, Math.random() * map_height],
+            radius: size,
+            fillColor: '#ccc',
+            strokeColor: '#ccc',
+            strokeWidth: 0
+
+        });
+
+        // Set alpha depending on size: biggest stars are ~.8, smallest ~.3
+        star.fillColor.alpha = size / 3;
+        sky.addChild(star);
+        i++;
+    }
+
+    sky.position = view.center;
+    stars = sky;
+
+    console.log('sky rendered');
+}
+
+function animateSky() {
+    if(typeof stars === 'boolean') return;
+    //console.log(stars);
+
+    //Change 10% of stars at a time
+    for(var i = 0; i < STARS_AMOUNT / 4; i++) {
+        var index = Math.floor(Math.random() * STARS_AMOUNT);
+        stars.children[index].fillColor.alpha += (Math.random() - 0.5) * 0.2;
+        //console.log(index);
+    }
+
+}
+
+function twinkle(star) {
+
 }
 
 project.currentStyle.strokeColor = 'white';
@@ -167,6 +239,11 @@ var assets = {
         explosionPath.fillColor = 'white';
         explosionPath.strokeColor = null;
         return new SymbolDefinition(explosionPath);
+    },
+    spawnProtection: new function() {
+        var circle = new paper.Path.Circle(new paper.Point(), 40);
+        circle.visible = false;
+        return circle;
     }
 };
 
@@ -374,6 +451,11 @@ function onFrame(event) {
 
     renderShips();
     moveShots();
+
+    // Might be a performance hit
+    if(ANIMATE_STARS && (event.count % 4 === 0)) {
+        //animateSky();
+    }
 }
 
 function renderShips() {
@@ -464,7 +546,6 @@ function onKeyDown(event) {
     //console.log(event);
     if ((event.key === 'left' || event.key === 'a') && !event.event.repeat) {
         socket.emit('player movement', LEFT);
-        console.log('left');
         return move_left = true;
     }
     if ((event.key === 'right' || event.key === 'd') && !event.event.repeat) {
@@ -514,9 +595,11 @@ $(document).ready( function() {
 
     // Stop left and right keyboard events from propagating.
 
-    //$(document).keydown(function(e) {
-    //    console.log(e.key)
-    //});
+    $(document).keydown(function(e) {
+        if(e.key === 'h') {
+            $('#setup').fadeToggle(200);
+        }
+    });
 
     socket.on('scoreboard add player', function(player) {
         addPlayer(player);
@@ -605,6 +688,8 @@ $(document).ready( function() {
         }
 
         player.ship = ship.exportJSON();
+        console.log(ship);
+        console.log(player.ship);
         socket.emit('new player', JSON.stringify(player));
         //console.log(JSON.stringify(player));
 
@@ -619,11 +704,27 @@ $(document).ready( function() {
 function Ship(options) {
 
     var path = new paper.Group().importJSON(options.group);
+    path.strokeWidth = 2;
     //path.closed = true;
     //var thrust = new paper.Path([-8, -4], [-14, 0], [-8, 4]);
     //console.log(path);
     //var rectangle = new paper.Path.Rectangle(path.bounds);
     //console.log(rectangle);
+    var playername = new paper.PointText({
+        point: [path.position.x, path.position.y - 28],
+        content: options.name,
+        fillColor: options.color,
+        fontSize: 14,
+        fontWeight: '300',
+        fontFamily: 'Source Sans Pro'
+    });
+    console.log(playername.content);
+    playername.justification = 'center';
+
+    var protectionCircle = assets.spawnProtection.clone();
+
+    console.log(this.protectionCircle);
+
     var group = new paper.Group(path);
     group.applyMatrix = false;
     //console.log(options.ship);
@@ -631,13 +732,14 @@ function Ship(options) {
     //console.log(group);
     group.position = new paper.Point(options.pos.x, options.pos.y);
     group.strokeColor = options.color;
-    group.strokeWidth = 2;
 
 
     //group.position = new paper.Point(options.pos.x, options.pos.y);
     //console.log(group.position.x + ', ' + group.position.y);
     //var id = options.id;
     return {
+        playername: playername,
+        protectionCircle: protectionCircle,
         item: group,
         name: options.name,
         angle: options.angle,
@@ -654,13 +756,13 @@ function Ship(options) {
         turnLeft: function() {
             console.log('turnleft');
             group.rotate(-3);
-            this.angle -= 3;
+            //this.angle -= 3;
         },
 
         turnRight: function() {
             console.log('turnright');
             group.rotate(3);
-            this.angle += 3;
+            //this.angle += 3;
         },
 
         thrust: function() {
@@ -693,17 +795,22 @@ function Ship(options) {
         move: function() {
             //console.log(this.vector);
             group.position = group.position.add(this.vector);
+            playername.position = group.position;
+            protectionCircle.position = group.position;
             //keepInView(group);
         },
 
         moveTo: function(position) {
             group.position = position;
+            playername.position = [group.position.x, group.position.y - 44];
+            protectionCircle.position = group.position;
             //keepInView(group);
         },
 
         turnTo: function(angle) {
             //this.angle = angle;
             group.rotation = angle;
+            //this.angle = angle/2;
             //console.log(angle);
             //keepInView(group);
         },
@@ -719,6 +826,7 @@ function Ship(options) {
             this.destroyedShip.visible = true;
             this.destroyedShip.strokeColor = this.color;
             this.item.visible = false;
+            this.playername.visible = false;
             this.stop();
             //this.item.position = paper.view.center;
             this.dying = true;
@@ -729,12 +837,28 @@ function Ship(options) {
             var ship = this;
             setTimeout(function() {
                 ship.item.visible = true;
+                ship.playername.visible = true;
                 //ship.stop();
                 //ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
                 ship.dying = false;
                 ship.destroyedShip.visible = false;
                 ship.setColor(ship.color);
+                ship.spawnProtection();
             }, SHIP_RESPAWN_TIME + 10);
+        },
+
+        spawnProtection: function() {
+
+            var circle = protectionCircle;
+            circle.visible = true;
+
+            //Deactivate after x seconds
+            setTimeout(function() {
+                circle.visible = false;
+                console.log('spawn protection deactivated');
+            }, SHIP_SPAWN_PROTECTION);
+            console.log(SHIP_SPAWN_PROTECTION);
+            return console.log('spawn protection activated');
         },
 
         setColor: function(color) {
