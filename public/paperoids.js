@@ -67,7 +67,7 @@ socket.on('game state ships', function(ships) {
 socket.on('game add player', function(ship) {
     //console.log('game add player');
     //console.log(ship);
-    addShip(ship);
+    addShip(ship, true);
 });
 
 socket.on('ships position', function(ships_positions) {
@@ -116,13 +116,15 @@ socket.on('ship destroyed', function(data) {
     });
 });
 
-function addShip(ship) {
+function addShip(ship, spawnprotection) {
     //console.log('added new ship for new player');
 
     console.log('received angle ' + ship.angle);
 
     var newship = new Ship(ship);
-    newship.spawnProtection();
+    if(spawnprotection) {
+        newship.spawnProtection();
+    }
     client.ships.push(newship);
     //console.log(newship);
 
