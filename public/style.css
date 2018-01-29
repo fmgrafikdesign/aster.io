@@ -239,6 +239,7 @@ textarea:focus, input:focus, button:focus{
     top: 5px;
     right: 5px;
     padding: 5px;
+    color: #fff;
 }
 
 #waiting-for-players {
@@ -247,7 +248,6 @@ textarea:focus, input:focus, button:focus{
 
 .scoreboard span {
     display: inline-block;
-    color: #fff;
     padding-right: 5px;
     width: 20%;
     line-height: 1;
@@ -390,4 +390,15 @@ span.scoreboard-name {
         width: 50vh;
         height: 100vw;
     }
+}
+
+.gameinfo {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    min-height: 20px;
+    min-width: 200px;
+    background-color: darkcyan;
+    color: #000;
+
 }

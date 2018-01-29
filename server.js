@@ -12,16 +12,16 @@ var port = 61161;
 try {
     console.log(require.resolve("paper"));
     console.log('paper found');
-} catch(e) {
+} catch (e) {
     console.error("paper is not found");
     process.exit(e.code);
 }
 
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
     res.sendFile(__dirname + '/paperoids.html');
 });
 
-app.get('/mobile', function(req, res) {
+app.get('/mobile', function (req, res) {
     res.sendFile(__dirname + '/mobile.html');
 });
 
@@ -29,7 +29,7 @@ app.use('/', express.static(__dirname + '/public/'));
 app.use('/paper', express.static(__dirname + '/node_modules/paper/dist/'));
 app.use('/js', express.static(__dirname + '/node_modules/'));
 
-http.listen(port, function() {
+http.listen(port, function () {
     console.log('Server running on port %s', port);
 });
 
@@ -38,7 +38,7 @@ http.listen(port, function() {
 //DEBUG FUNCTIONS
 var SHOW_PERFORMANCE = false;
 
-/** Game Serve logic **/
+/** Game Server logic **/
 
 var LIFES = 3; // Lifes per player
 var ASTEROIDS = 10; // Number of Asteroids on screen
@@ -46,8 +46,8 @@ var SHOT_DELAY = 12; // delay between shots
 var SHOT_SPEED = 5; // How many px does a shot move per tick
 var SHOT_LIFESPAN = 120; // How long a shot lives
 
-var SHIP_TOPSPEED = 8; // Topspeed of ship
-var SHIP_ACCELERATION = 0.2; // Acceleration of ship
+var SHIP_TOPSPEED = 6; // Topspeed of ship
+var SHIP_ACCELERATION = 0.22; // Acceleration of ship
 var SHIP_TURNRATE = 3; // Turnrate of ship
 
 var SHIP_SIZE = 48;
@@ -61,6 +61,10 @@ var POINTS_PER_ASTEROID = 10;
 var map_width = 1920;
 var map_height = 1080;
 
+var GAME_ROUND_LENGTH = 61 * 3 * 1000 // Duration of one round (in Milliseconds)
+//var GAME_ROUND_LENGTH = 5 * 1000 // DEBUG Duration of one round (in Milliseconds)
+var GAME_ROUND_INBETWEEN = 11 * 1000 // Time between two rounds (in Milliseconds)
+var GAME_ROUND_START_TIMESTAMP = 0;
 
 var UP = 0;
 var RIGHT = 1;
@@ -90,20 +94,20 @@ paper.setup([map_width, map_height]);
  *  Game logic like killing and respawning stuff
  */
 
-function toRadians (angle) {
+function toRadians(angle) {
     return angle * (Math.PI / 180);
 }
 
-function rgb2hex(rgb){
+function rgb2hex(rgb) {
     rgb = rgb.match(/^rgba?[\s+]?\([\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?/i);
     return (rgb && rgb.length === 4) ? "#" +
-        ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
-        ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
-        ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : '';
+        ("0" + parseInt(rgb[1], 10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[2], 10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[3], 10).toString(16)).slice(-2) : '';
 }
 
-function minimumBrightness(h,s,l, min) {
-    return [h,s,Math.max(l, min)]
+function minimumBrightness(h, s, l, min) {
+    return [h, s, Math.max(l, min)]
 }
 
 function hsvToRgb(h, s, v) {
@@ -116,15 +120,27 @@ function hsvToRgb(h, s, v) {
     var t = v * (1 - (1 - f) * s);
 
     switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
+        case 0:
+            r = v, g = t, b = p;
+            break;
+        case 1:
+            r = q, g = v, b = p;
+            break;
+        case 2:
+            r = p, g = v, b = t;
+            break;
+        case 3:
+            r = p, g = q, b = v;
+            break;
+        case 4:
+            r = t, g = p, b = v;
+            break;
+        case 5:
+            r = v, g = p, b = q;
+            break;
     }
 
-    return [ r * 255, g * 255, b * 255 ];
+    return [r * 255, g * 255, b * 255];
 }
 
 function hexToRgb(hex) {
@@ -149,15 +165,21 @@ function rgbToHsv(r, g, b) {
         h = 0; // achromatic
     } else {
         switch (max) {
-            case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-            case g: h = (b - r) / d + 2; break;
-            case b: h = (r - g) / d + 4; break;
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            case b:
+                h = (r - g) / d + 4;
+                break;
         }
 
         h /= 6;
     }
 
-    return [ h, s, v ];
+    return [h, s, v];
 }
 
 function serializeShip(ship) {
@@ -176,7 +198,7 @@ function serializeShip(ship) {
     return serialized;
 }
 
-io.on('connection', function(socket) {
+io.on('connection', function (socket) {
     console.log('a user connected! | ' + socket.id);
 
     // Send game info 'players' to new player
@@ -184,39 +206,44 @@ io.on('connection', function(socket) {
 
     var shipsToPlayer = [];
 
-    game.ships.forEach(function(ship) {
+    game.ships.forEach(function (ship) {
         //console.log(ship);
-       var shipToPlayer = serializeShip(ship);
+        var shipToPlayer = serializeShip(ship);
 
-       shipsToPlayer.push(shipToPlayer);
+        shipsToPlayer.push(shipToPlayer);
     });
 
     socket.emit('game state ships', shipsToPlayer);
 
     //console.log(score.getPlayers());
-    score.getPlayers().forEach(function(player) {
+    score.getPlayers().forEach(function (player) {
         //console.log('+1');
         socket.emit('scoreboard add player', player);
     });
 
+    var remaining_time = GAME_ROUND_LENGTH - (new Date().getTime() - GAME_ROUND_START_TIMESTAMP);
+
     var gameinfo = {
-        SHOT_SPEED : SHOT_SPEED,
-        SHOT_LIFESPAN : SHOT_LIFESPAN,
-        SHIP_RESPAWN_TIME : SHIP_RESPAWN_TIME,
-        SHIP_SPAWN_PROTECTION : SHIP_SPAWN_PROTECTION,
+        SHOT_SPEED: SHOT_SPEED,
+        SHOT_LIFESPAN: SHOT_LIFESPAN,
+        SHIP_RESPAWN_TIME: SHIP_RESPAWN_TIME,
+        SHIP_SPAWN_PROTECTION: SHIP_SPAWN_PROTECTION,
         SHIP_SIZE: SHIP_SIZE,
-        map_width : map_width,
-        map_height: map_height
+        map_width: map_width,
+        map_height: map_height,
+        remaining_time: remaining_time
     };
+
+    socket.emit('gameinfo', remaining_time);
 
     socket.emit('game state variables', gameinfo);
 
-    socket.on('debug message', function(message) {
+    socket.on('debug message', function (message) {
         console.log(message);
     });
 
 
-    socket.on('new player', function(player) {
+    socket.on('new player', function (player) {
 
         player = JSON.parse(player);
         //console.log(player);
@@ -225,18 +252,17 @@ io.on('connection', function(socket) {
         //console.log(player.ship);
 
         // Give color a minimum lightness to prevent exploiting dark, hardly visible ships
+        // This color conversion is cancer, but I'm too lazy to think of a more effective way to do it.
         var color = player.color;
         color = hexToRgb(color);
-        console.log('rgb', color);
+        //console.log('rgb', color);
         color = rgbToHsv(color.r, color.g, color.b);
-        console.log('hsv', color);
-        color = minimumBrightness(color[0]*360, color[1]*100, color[2]*100, 30);
-        console.log('hsv minimum Brightness', color);
-        color = hsvToRgb(color[0]/360, color[1]/100, color[2]/100);
+        //console.log('hsv', color);
+        color = minimumBrightness(color[0] * 360, color[1] * 100, color[2] * 100, 30);
+        //console.log('hsv minimum Brightness', color);
+        color = hsvToRgb(color[0] / 360, color[1] / 100, color[2] / 100);
         color = [Math.floor(color[0]), Math.floor(color[1]), Math.floor(color[2])];
-        color = rgb2hex('rgb('+color[0]+', '+color[1]+', '+color[2]+')');
-
-        // This color conversion is cancer.
+        color = rgb2hex('rgb(' + color[0] + ', ' + color[1] + ', ' + color[2] + ')');
 
         var ship = {
             id: socket.id,
@@ -281,7 +307,8 @@ io.on('connection', function(socket) {
 
     });
 
-    socket.on('player movement', function(dir) {
+    socket.on('player movement', function (dir) {
+        if (!game.running) return;
         //console.log('received player ' + socket.id + ' movement: ' + movement.up + ' ' + movement.down + ' ' + movement.left + ' ' + movement.right + ' ' + movement.shooting);
 
         // Update player movement
@@ -291,7 +318,7 @@ io.on('connection', function(socket) {
     });
 
 
-    socket.on('player movement stop', function(dir) {
+    socket.on('player movement stop', function (dir) {
         //console.log('received player ' + socket.id + ' movement: ' + movement.up + ' ' + movement.down + ' ' + movement.left + ' ' + movement.right + ' ' + movement.shooting);
 
         // Update player movement
@@ -302,7 +329,7 @@ io.on('connection', function(socket) {
     });
 
 
-    socket.on('disconnect', function() {
+    socket.on('disconnect', function () {
         // Delete player stuff
         game.removeShip(socket.id);
         game.removeShots(socket.id);
@@ -312,7 +339,7 @@ io.on('connection', function(socket) {
     })
 });
 
-function GameServer(){
+function GameServer() {
     // ships obj: id, color, movement, pos.x, pos.y, pos.angle
     this.ships = [];
 
@@ -323,12 +350,16 @@ function GameServer(){
 
     // asteroids obj: asteroid-id, owner-id, color, pos.x, pos.y, movement
     this.asteroids = [];
+
+    // Game is currently running
+    this.running = false;
+
 }
 
 GameServer.prototype = {
 
     // Add ship on player entrance
-    addShip: function(ship) {
+    addShip: function (ship) {
         var newship = new Ship(ship);
         newship.spawnProtection();
         this.ships.push(newship);
@@ -336,10 +367,10 @@ GameServer.prototype = {
     },
 
     // Get a ship via its id
-    getShip: function(id) {
+    getShip: function (id) {
         var result;
-        this.ships.forEach(function(ship) {
-            if(id === ship.id) {
+        this.ships.forEach(function (ship) {
+            if (id === ship.id) {
                 result = ship;
             }
         });
@@ -347,15 +378,15 @@ GameServer.prototype = {
         return result;
     },
 
-    updateShip: function(shipid, movement) {
-        this.ships.forEach(function(ship) {
-            if(ship.id == shipid) {
+    updateShip: function (shipid, movement) {
+        this.ships.forEach(function (ship) {
+            if (ship.id == shipid) {
 
                 ship.movement = movement;
 
                 // If shooting: add shot
                 // TODO Consider delay
-                if(ship.movement.shooting) {
+                if (ship.movement.shooting) {
 
                     //TODO calculate angle & position
                     var shot = {
@@ -375,19 +406,19 @@ GameServer.prototype = {
         });
     },
 
-    updateShipMovement: function(shipid, dir, move) {
-        this.ships.forEach(function(ship) {
-            if(ship.id === shipid) {
+    updateShipMovement: function (shipid, dir, move) {
+        this.ships.forEach(function (ship) {
+            if (ship.id === shipid) {
 
-                if(dir === UP) {
+                if (dir === UP) {
                     ship.movement.up = move;
-                } else if(dir === DOWN) {
+                } else if (dir === DOWN) {
                     ship.movement.down = move;
-                } else if(dir === LEFT) {
+                } else if (dir === LEFT) {
                     ship.movement.left = move;
-                } else if(dir === RIGHT) {
+                } else if (dir === RIGHT) {
                     ship.movement.right = move;
-                } else if(dir === FIRE && move) {
+                } else if (dir === FIRE && move) {
                     ship.movement.shooting = move;
                     game.addShot(ship);
                 }
@@ -406,10 +437,10 @@ GameServer.prototype = {
 
 
     // Add shot
-    addShot: function(ship) {
+    addShot: function (ship) {
 
         // If the ship is dieing or dead you can't fire
-        if(ship.dying || ship.isInvincible()) {
+        if (ship.dying || ship.isInvincible()) {
             return false;
         }
 
@@ -431,32 +462,36 @@ GameServer.prototype = {
 
 
     // Remove ship on player exit
-    removeShip: function(shipID) {
-        this.ships = this.ships.filter( function(t) { return t.id !== shipID })
+    removeShip: function (shipID) {
+        this.ships = this.ships.filter(function (t) {
+            return t.id !== shipID
+        })
     },
 
-    removeShots: function(shipID) {
-        this.shots = this.shots.filter( function(t) { return t.owner !== shipID });
+    removeShots: function (shipID) {
+        this.shots = this.shots.filter(function (t) {
+            return t.owner !== shipID
+        });
     },
 
 
     // Synchronize ships
-    moveShips: function() {
-        this.ships.forEach ( function(ship) {
+    moveShips: function () {
+        this.ships.forEach(function (ship) {
 
             // Update ship angle
-            if(ship.movement.left) {
+            if (ship.movement.left) {
                 //ship.angle -= SHIP_TURNRATE;
                 ship.turnLeft();
             }
 
-            if(ship.movement.right) {
+            if (ship.movement.right) {
                 //ship.angle += SHIP_TURNRATE;
                 ship.turnRight();
             }
 
             // Update ship speed
-            if(ship.movement.up) {
+            if (ship.movement.up) {
                 //ship.speed = Math.max(SHIP_TOPSPEED);
                 //ship.speed = SHIP_TOPSPEED;
                 ship.thrust();
@@ -495,17 +530,16 @@ GameServer.prototype = {
             // Update ship position (based on speed & angle
 
 
-
         });
     },
 
 
     // Synchronize shots
-    moveShots: function() {
+    moveShots: function () {
         // Update shot position
-        this.shots.forEach(function(shot, i) {
+        this.shots.forEach(function (shot, i) {
 
-            if(shot.expired()) {
+            if (shot.expired()) {
                 shot.remove();
                 game.shots.splice(i, 1);
                 return;
@@ -526,16 +560,17 @@ GameServer.prototype = {
     },
 
     // Detect shot collision
-    detectShotCollision: function() {
+    detectShotCollision: function () {
         // ...
     },
 
-    moveAsteroids: function() {
+    moveAsteroids: function () {
         // ...
     },
 
 
-    update: function() {
+    // Update game objects
+    update: function () {
         // Update shots;
         this.moveShots();
 
@@ -545,10 +580,10 @@ GameServer.prototype = {
         // Update Asteroid movement;
         this.moveAsteroids();
 
-        // Check for collisions
     },
 
-    checks: function() {
+    // Check for collisions
+    checks: function () {
         //checkCollisions
         this.checkCollisions();
 
@@ -557,28 +592,27 @@ GameServer.prototype = {
     },
 
     //Check if any ship is colliding with asteroids
-    checkCollisions: function() {
+    checkCollisions: function () {
 
     },
 
     //Check if any shot is colliding with ships or asteroids
-    checkHits: function() {
+    checkHits: function () {
+
+        // If the game is over, no hitchecks
+        if (!game.running) return;
 
         game.shots.forEach(function (shot) {
 
             // Ship hits
             game.ships.forEach(function (ship) {
-                if(ship.id === shot.owner) {
+                if (ship.id === shot.owner) {
                     return;
                 }
 
-                //console.log('bounds: ' + ship.item.bounds.x + ' ' + ship.item.bounds.y + ' ' + ship.item.bounds.width + ' ' + ship.item.bounds.height);
-                //console.log('bullet: ' + shot.bullet.position.x + ' ' + shot.bullet.position.y);
-
-
                 var check = ship.item.bounds.contains(shot.bullet.position)
                 //console.log(check);
-                if(check && !ship.isDieing() && !ship.isInvincible()) {
+                if (check && !ship.isDieing() && !ship.isInvincible()) {
                     console.log(ship.name + ' hit by ' + shot.owner);
                     ship.hitBy(shot.owner);
                 }
@@ -589,7 +623,7 @@ GameServer.prototype = {
 
     //Send data to clients
     //See "Optimisations" in trello list for possible improvements over sending game state
-    sendData: function() {
+    sendData: function () {
 
         var ships_position = [];
 
@@ -607,15 +641,69 @@ GameServer.prototype = {
 
         //console.log(ships_position);
         io.emit('ships position', ships_position);
+    },
+
+    // When the round is started
+    startRound: function () {
+        // Reenable player control & hitchecks
+        this.running = true;
+        console.log('Round has started');
+
+        var game = this;
+
+        // Reset Scoreboard
+        score.reset();
+
+        // Respawn Ships
+
+        this.ships.forEach(function (ship) {
+            ship.respawn();
+        });
+
+        // Send "game round start" to clients
+        io.emit('game round start', GAME_ROUND_LENGTH);
+        //DEBUG
+        //io.emit('gameinfo', 'Round has started');
+
+        // Save round start timestamp
+        GAME_ROUND_START_TIMESTAMP = new Date().getTime();
+
+        // Tell the game when it's over
+        setTimeout(function () {
+            game.endRound();
+        }, GAME_ROUND_LENGTH);
+    },
+
+    // When the round is over
+    endRound: function () {
+        // Disable player control & hitchecks
+        this.running = false;
+        console.log('Round has ended');
+
+        // Send "game round end" to clients
+        io.emit('game round end', GAME_ROUND_INBETWEEN);
+        // DEBUG
+        //io.emit('gameinfo', 'Round has ended');
+
+        // Sort Scoreboard & get the winner
+
+        // Tell the game when to start again
+        var game = this;
+        setTimeout(function () {
+            game.startRound();
+        }, GAME_ROUND_INBETWEEN);
     }
 
-    //destroy
 };
 
 game = new GameServer();
 score = new Scoreboard();
 
-setInterval(function() {
+//Start a new round
+game.startRound();
+
+
+setInterval(function () {
     var perf = process.hrtime();
     //console.log(perf)
     game.update();
@@ -630,7 +718,7 @@ setInterval(function() {
 
 
 var assets = {
-    destroyedShip: new function() {
+    destroyedShip: new function () {
         var group = new paper.Group(
             new paper.Path([-10, -8], [10, 0]),
             new paper.Path([10, 0], [-10, 8]),
@@ -639,13 +727,13 @@ var assets = {
         group.visible = false;
         return group;
     },
-    explosion: new function() {
+    explosion: new function () {
         var explosionPath = new paper.Path.Circle(new paper.Point(), 1);
         explosionPath.fillColor = 'white';
         explosionPath.strokeColor = null;
         return new paper.SymbolDefinition(explosionPath);
     },
-    spawnProtection: new function() {
+    spawnProtection: new function () {
         var circle = new paper.Path.Circle(new paper.Point(), 20);
         circle.visible = false;
         return circle;
@@ -687,11 +775,11 @@ function Scoreboard() {
     return {
         score: players,
 
-        getPlayers: function() {
+        getPlayers: function () {
             return players;
         },
 
-        addPlayer: function(id, name, color) {
+        addPlayer: function (id, name, color) {
             var player = {
                 id: id,
                 name: name,
@@ -709,15 +797,19 @@ function Scoreboard() {
 
         },
 
-        removePlayer: function(id) {
-            players = players.filter( function(t) { return t.id !== id })
+        removePlayer: function (id) {
+            players = players.filter(function (t) {
+                return t.id !== id
+            })
 
             //Remove player from clients
             io.emit('scoreboard remove player', id);
         },
 
-        updateScore: function(id, points, kills, deaths) {
-            var player = players.find( function(player) { return player.id === id });
+        updateScore: function (id, points, kills, deaths) {
+            var player = players.find(function (player) {
+                return player.id === id
+            });
             player.score += points;
             player.kills += kills;
             player.deaths += deaths;
@@ -725,6 +817,17 @@ function Scoreboard() {
 
             //Send score to clients
             io.emit('scoreboard update player', player);
+        },
+
+        // Resets all scores to 0
+        reset: function () {
+            players.forEach(function (player) {
+                player.score = 0;
+                player.kills = 0;
+                player.deaths = 0;
+            });
+            io.emit('scoreboard reset');
+
         }
     }
 }
@@ -764,19 +867,21 @@ function Ship(options) {
             length: 1
         }),
 
-        turnLeft: function() {
+        destroyedShip: assets.destroyedShip.clone(),
+
+        turnLeft: function () {
             group.rotate(-SHIP_TURNRATE);
             this.angle -= SHIP_TURNRATE;
             //console.log('group.rotation = ' + group.rotation + ', this.angle = ' + this.angle);
         },
 
-        turnRight: function() {
+        turnRight: function () {
             group.rotate(SHIP_TURNRATE);
             this.angle += SHIP_TURNRATE;
             //console.log('group.rotation = ' + group.rotation + ', this.angle = ' + this.angle);
         },
 
-        thrust: function() {
+        thrust: function () {
             //thrust.visible = true;
 
             this.vector = this.vector.add(new paper.Point({
@@ -789,15 +894,15 @@ function Ship(options) {
             }
         },
 
-        isInvincible: function() {
+        isInvincible: function () {
             return this.invincible;
         },
 
-        stop: function() {
+        stop: function () {
             this.vector.length = 0;
         },
 
-        fire: function() {
+        fire: function () {
 
             if (!this.dying) {
                 Shot.fire(this.item.position, this.angle);
@@ -805,24 +910,24 @@ function Ship(options) {
             }
         },
 
-        coast: function() {
+        coast: function () {
             //thrust.visible = false;
             this.vector = this.vector.multiply(.992);
         },
 
-        move: function() {
+        move: function () {
             //console.log(this.item.position.x + ' ' + this.item.position.y);
             group.position = group.position.add(this.vector);
             keepInView(group);
         },
 
-        moveTo: function(position) {
+        moveTo: function (position) {
             group.position = position;
             keepInView(group);
         },
 
-        hitBy: function(id) {
-            if(hit) {
+        hitBy: function (id) {
+            if (hit) {
                 return;
             }
 
@@ -838,44 +943,43 @@ function Ship(options) {
             this.destroy();
         },
 
-        destroy: function() {
-            this.destroyedShip = assets.destroyedShip.clone();
+        destroy: function () {
             this.destroyedShip.position = this.item.position;
             this.destroyedShip.visible = true;
             this.item.visible = false;
             this.stop();
             //this.item.position = paper.view.center;
             this.dying = true;
-            this.respawn();
-        },
 
-        isDieing: function() {
-            return this.dying;
-        },
-
-        isProtected: function() {
-            return this.dying;
-        },
-
-        respawn: function() {
             var ship = this;
-            hit = false;
-            setTimeout(function() {
-                //console.log('ship respawned');
-                ship.item.visible = true;
-                ship.stop();
-                ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
-                ship.dying = false;
-                ship.destroyedShip.visible = false;
-
-                //Activate spawn protection
-                ship.spawnProtection();
-
-
+            setTimeout(function () {
+                ship.respawn();
             }, SHIP_RESPAWN_TIME);
         },
 
-        spawnProtection: function() {
+        isDieing: function () {
+            return this.dying;
+        },
+
+        isProtected: function () {
+            return this.dying;
+        },
+
+        respawn: function () {
+            hit = false;
+            //console.log('ship respawned');
+            this.item.visible = true;
+            this.stop();
+            this.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
+            this.dying = false;
+            this.destroyedShip.visible = false;
+
+            //Activate spawn protection
+            this.spawnProtection();
+
+        },
+
+        spawnProtection: function () {
             this.invincible = true;
             this.spawnProtectionCircle = assets.spawnProtection.clone();
             this.spawnProtectionCircle.position = this.item.position;
@@ -883,15 +987,15 @@ function Ship(options) {
             var ship = this;
 
             //Deactivate after x seconds
-            setTimeout(function() {
+            setTimeout(function () {
                 ship.invincible = false;
                 ship.spawnProtectionCircle.visible = false;
-                console.log('spawn protection deactivated');
+                //console.log('spawn protection deactivated');
             }, SHIP_SPAWN_PROTECTION);
-            return console.log('spawn protection activated');
+            //return console.log('spawn protection activated');
         },
 
-        checkCollisions: function() {
+        checkCollisions: function () {
             var crashRock;
 
             // move rocks and do a hit-test
@@ -937,18 +1041,19 @@ function Shot(args) {
     //var group = new paper.Group();
     var pos = args.position;
     var vec = new paper.Point({
-            angle: args.angle,
-            length: SHOT_SPEED
-        });
+        angle: args.angle,
+        length: SHOT_SPEED
+    });
+
     //console.log('shot start pos: ' + pos.x + ', ' + pos.y);
 
     function checkHits(bullet) {
         for (var r = 0; r < Rocks.children.length; r++) {
             var rock = Rocks.children[r];
-            if (rock.bounds.contains(bullet.position) ) {
+            if (rock.bounds.contains(bullet.position)) {
                 Score.update(rock.shapeType);
                 Rocks.explode(rock);
-                if (rock.shapeType < Rocks.TYPE_SMALL ) {
+                if (rock.shapeType < Rocks.TYPE_SMALL) {
                     for (var j = 0; j < 2; j++) {
                         Rocks.add(1, rock.shapeType + 4, rock.position);
                     }
@@ -969,42 +1074,42 @@ function Shot(args) {
         vector: vec,
         bullet: new paper.Path.Circle({
             applyMatrix: true,
-                center: pos.add(vec),
-                radius: 0.5,
-                fillColor: args.color,
-                strokeColor: args.color,
-                strokeWidth: 0,
-                data: {
-                    vector: vec,
-                    timeToDie: SHOT_LIFESPAN
-                }
-            })
+            center: pos.add(vec),
+            radius: 0.5,
+            fillColor: args.color,
+            strokeColor: args.color,
+            strokeWidth: 0,
+            data: {
+                vector: vec,
+                timeToDie: SHOT_LIFESPAN
+            }
+        })
         ,
-        expired: function() {
-          return this.bullet.data.timeToDie < 1;
+        expired: function () {
+            return this.bullet.data.timeToDie < 1;
         },
-        move: function() {
+        move: function () {
 
-                this.bullet.data.timeToDie--;
-                if (this.bullet.data.timeToDie < 1) {
-                    this.bullet.remove();
-                } else {
-                    this.bullet.position = this.bullet.position.add(this.bullet.data.vector);
-                    keepInView(this.bullet);
-                    //console.log(this.bullet.position);
-                    //checkHits(bullet);
-                    //keepInView(bullet);
-                }
+            this.bullet.data.timeToDie--;
+            if (this.bullet.data.timeToDie < 1) {
+                this.bullet.remove();
+            } else {
+                this.bullet.position = this.bullet.position.add(this.bullet.data.vector);
+                keepInView(this.bullet);
+                //console.log(this.bullet.position);
+                //checkHits(bullet);
+                //keepInView(bullet);
+            }
 
         },
-        remove: function() {
+        remove: function () {
             //console.log('shot end pos: ' + this.bullet.position.x + ', ' + this.bullet.position.y);
             this.bullet.remove();
         }
     };
 };
 
-var Rocks = new function() {
+var Rocks = new function () {
     var group = new paper.Group();
     var shapes = [
         new paper.Path(
@@ -1047,7 +1152,7 @@ var Rocks = new function() {
     return {
         shapes: shapes,
         children: group.children,
-        make: function(type, pos) {
+        make: function (type, pos) {
             var randomRock = type + Math.floor(4 * Math.random());
             var rock = rockSymbols[randomRock].place();
             rock.position = pos ? pos : Point.random() * view.size;
@@ -1058,13 +1163,13 @@ var Rocks = new function() {
             rock.shapeType = type;
             return rock;
         },
-        add: function(amount, type, position) {
+        add: function (amount, type, position) {
             for (var i = 0; i < amount; i++) {
                 var rock = this.make(type || this.TYPE_BIG, position);
                 group.addChild(rock);
             }
         },
-        explode: function(rock) {
+        explode: function (rock) {
             var boomRock = rock.symbol.definition.clone();
             boomRock.position = rock.position;
             for (var i = 0; i < boomRock.segments.length; i++) {
@@ -1075,13 +1180,13 @@ var Rocks = new function() {
             }
             boomRock.remove();
         },
-        iterateExplosions: function() {
+        iterateExplosions: function () {
             for (var i = 0; i < explosions.children.length; i++) {
                 var explosion = explosions.children[i];
                 explosion.vector.length *= .7;
                 explosion.position += explosion.vector;
                 explosion.opacity = explosion.vector.length;
-                if (explosion.vector.length < 0.05 ) {
+                if (explosion.vector.length < 0.05) {
                     explosion.remove();
                     // if no more rocks, wait a second and start a new round
                     if (this.children.length < 1 && !Game.roundDelay) {
@@ -1119,6 +1224,6 @@ function keepInView(item) {
     }
 
     if (position.y < -itemBounds.height) {
-        position.y = bounds.height  + itemBounds.height / 2;
+        position.y = bounds.height + itemBounds.height / 2;
     }
 }

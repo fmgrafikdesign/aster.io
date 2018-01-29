@@ -1,4 +1,3 @@
-
 var UP = 0;
 var RIGHT = 1;
 var DOWN = 2;
@@ -18,6 +17,8 @@ var STARS_SIZE = 2;
 
 var SHOW_PLAYERNAMES = true;
 
+var REMAINING_TIME = 0;
+
 var map_width = 1920;
 var map_height = 1080;
 
@@ -31,12 +32,12 @@ var presets = {
 
 var socket = io();
 
-socket.on('acknowledge new player', function(info) {
+socket.on('acknowledge new player', function (info) {
     //console.log('server acknowledged you');
     $('#shipinfo').fadeOut(200);
 });
 
-socket.on('game state variables', function(info) {
+socket.on('game state variables', function (info) {
     //console.log('game vars updated');
     //console.log(info);
     SHOT_SPEED = info.SHOT_SPEED;
@@ -46,17 +47,20 @@ socket.on('game state variables', function(info) {
     SHIP_SIZE = info.SHIP_SIZE;
     map_width = info.map_width;
     map_height = info.map_height;
+    REMAINING_TIME = info.remaining_time;
+
     //console.log(SHIP_SPAWN_PROTECTION);
-    if(RENDER_STARS) {
+    if (RENDER_STARS) {
         renderSky();
     }
+
 });
 
-socket.on('game state ships', function(ships) {
+socket.on('game state ships', function (ships) {
     //console.log('game state updated');
     //client.ships = ships;
     //console.log(ships);
-    ships.forEach(function(ship) {
+    ships.forEach(function (ship) {
         //console.log(ship);
         addShip(ship);
         //console.log(ship.group);
@@ -64,16 +68,16 @@ socket.on('game state ships', function(ships) {
     });
 });
 
-socket.on('game add player', function(ship) {
+socket.on('game add player', function (ship) {
     //console.log('game add player');
     //console.log(ship);
     addShip(ship, true);
 });
 
-socket.on('ships position', function(ships_positions) {
-    client.ships.forEach(function(ship) {
-        ships_positions.forEach(function(position) {
-            if(ship.id === position[0]) {
+socket.on('ships position', function (ships_positions) {
+    client.ships.forEach(function (ship) {
+        ships_positions.forEach(function (position) {
+            if (ship.id === position[0]) {
                 ship.position = new Point(position[1], position[2]);
                 ship.angle = position[3];
                 //console.log(position[3]);
@@ -82,11 +86,11 @@ socket.on('ships position', function(ships_positions) {
     });
 });
 
-socket.on('shot added', function(shipid) {
+socket.on('shot added', function (shipid) {
     //console.log('shot added');
     var shooter;
-    client.ships.forEach(function(ship) {
-        if(shipid === ship.id) {
+    client.ships.forEach(function (ship) {
+        if (shipid === ship.id) {
             shooter = ship;
         }
     });
@@ -106,10 +110,10 @@ socket.on('shot added', function(shipid) {
     client.shots.push(new Shot(shot));
 });
 
-socket.on('ship destroyed', function(data) {
+socket.on('ship destroyed', function (data) {
     //console.log('ship destroyed');
-    client.ships.forEach(function(ship) {
-        if(data.ship_id === ship.id) {
+    client.ships.forEach(function (ship) {
+        if (data.ship_id === ship.id) {
             ///console.log('hit...');
             ship.hitBy(data.id);
         }
@@ -122,7 +126,7 @@ function addShip(ship, spawnprotection) {
     console.log('received angle ' + ship.angle);
 
     var newship = new Ship(ship);
-    if(spawnprotection) {
+    if (spawnprotection) {
         newship.spawnProtection();
     }
     client.ships.push(newship);
@@ -133,15 +137,15 @@ function addShip(ship, spawnprotection) {
 }
 
 
-socket.on('player disconnected', function(id) {
+socket.on('player disconnected', function (id) {
     //console.log(id);
     removeShots(id);
     removePlayer(id);
 });
 
 function removePlayer(id) {
-    client.ships.forEach(function(ship, i) {
-        if(ship.id === id) {
+    client.ships.forEach(function (ship, i) {
+        if (ship.id === id) {
             client.ships[i].item.remove();
             client.ships[i].playername.remove();
             client.ships[i].protectionCircle.remove();
@@ -154,8 +158,8 @@ function removePlayer(id) {
 function removeShots(id) {
     var toberemoved = [];
 
-    for ( var i = client.shots.length-1; i >= 0; i--) {
-        if(client.shots[i].owner === id) {
+    for (var i = client.shots.length - 1; i >= 0; i--) {
+        if (client.shots[i].owner === id) {
             client.shots[i].bullet.remove();
             // When splicing this, the rest of the array is not pristine anymore and does not match all shots
             client.shots.splice(i, 1);
@@ -170,17 +174,18 @@ function initialize() {
     //Lives.initialize();
 }
 
-function toRadians (angle) {
+function toRadians(angle) {
     return angle * (Math.PI / 180);
 }
 
 stars = false;
+
 function renderSky() {
     var i = 0;
     var sky = new paper.Group([]);
-    while(i < STARS_AMOUNT) {
+    while (i < STARS_AMOUNT) {
         // size is between 1 and 2.5
-        var size = Math.random() *1.5 + 1;
+        var size = Math.random() * 1.5 + 1;
         var star = new paper.Path.Circle({
             center: [Math.random() * map_width, Math.random() * map_height],
             radius: size,
@@ -203,11 +208,11 @@ function renderSky() {
 }
 
 function animateSky() {
-    if(typeof stars === 'boolean') return;
+    if (typeof stars === 'boolean') return;
     //console.log(stars);
 
     //Change 10% of stars at a time
-    for(var i = 0; i < STARS_AMOUNT / 4; i++) {
+    for (var i = 0; i < STARS_AMOUNT / 4; i++) {
         var index = Math.floor(Math.random() * STARS_AMOUNT);
         stars.children[index].fillColor.alpha += (Math.random() - 0.5) * 0.2;
         //console.log(index);
@@ -223,10 +228,10 @@ project.currentStyle.strokeColor = 'white';
 
 var Game = {
     roundDelay: false,
-    over: function() {
+    over: function () {
         document.getElementById('gameover').style.display = 'block';
     },
-    newRound: function() {
+    newRound: function () {
         Game.roundDelay = false;
         Rocks.add(presets.rockCount);
     },
@@ -234,7 +239,7 @@ var Game = {
 };
 
 var assets = {
-    destroyedShip: new function() {
+    destroyedShip: new function () {
         var group = new Group(
             new Path([-10, -8], [10, 0]),
             new Path([10, 0], [-10, 8]),
@@ -243,13 +248,13 @@ var assets = {
         group.visible = false;
         return group;
     },
-    explosion: new function() {
+    explosion: new function () {
         var explosionPath = new Path.Circle(new Point(), 1);
         explosionPath.fillColor = 'white';
         explosionPath.strokeColor = null;
         return new SymbolDefinition(explosionPath);
     },
-    spawnProtection: new function() {
+    spawnProtection: new function () {
         var circle = new paper.Path.Circle(new paper.Point(), 40);
         circle.visible = false;
         return circle;
@@ -257,7 +262,7 @@ var assets = {
 };
 
 
-var Rocks = new function() {
+var Rocks = new function () {
     var group = new Group();
     var shapes = [
         new Path(
@@ -300,7 +305,7 @@ var Rocks = new function() {
     return {
         shapes: shapes,
         children: group.children,
-        make: function(type, pos) {
+        make: function (type, pos) {
             var randomRock = type + Math.floor(4 * Math.random());
             var rock = rockSymbols[randomRock].place();
             rock.position = pos ? pos : Point.random() * view.size;
@@ -311,13 +316,13 @@ var Rocks = new function() {
             rock.shapeType = type;
             return rock;
         },
-        add: function(amount, type, position) {
+        add: function (amount, type, position) {
             for (var i = 0; i < amount; i++) {
                 var rock = this.make(type || this.TYPE_BIG, position);
                 group.addChild(rock);
             }
         },
-        explode: function(rock) {
+        explode: function (rock) {
             var boomRock = rock.symbol.definition.clone();
             boomRock.position = rock.position;
             for (var i = 0; i < boomRock.segments.length; i++) {
@@ -328,13 +333,13 @@ var Rocks = new function() {
             }
             boomRock.remove();
         },
-        iterateExplosions: function() {
+        iterateExplosions: function () {
             for (var i = 0; i < explosions.children.length; i++) {
                 var explosion = explosions.children[i];
                 explosion.vector.length *= .7;
                 explosion.position += explosion.vector;
                 explosion.opacity = explosion.vector.length;
-                if (explosion.vector.length < 0.05 ) {
+                if (explosion.vector.length < 0.05) {
                     explosion.remove();
                     // if no more rocks, wait a second and start a new round
                     if (this.children.length < 1 && !Game.roundDelay) {
@@ -351,7 +356,7 @@ var Rocks = new function() {
     };
 };
 
-var Score = new function() {
+var Score = new function () {
     var numberGroup = new Group(
         new Path([0, 0], [20, 0], [20, 27], [0, 27], [0, 0]),
         new Path([10, 0], [10, 27]),
@@ -368,7 +373,7 @@ var Score = new function() {
     var scoreDisplay = new Group();
     var score = 0;
     return {
-        update: function(type) {
+        update: function (type) {
             if (type == Rocks.TYPE_BIG) score += 20;
             if (type == Rocks.TYPE_MEDIUM) score += 50;
             if (type == Rocks.TYPE_SMALL) score += 100;
@@ -408,7 +413,7 @@ function keepInView(item) {
     }
 
     if (position.y < -itemBounds.height) {
-        position.y = bounds.height  + itemBounds.height / 2;
+        position.y = bounds.height + itemBounds.height / 2;
     }
 }
 
@@ -442,7 +447,7 @@ shoot = false;
 function onFrame(event) {
     // Bullets.move();
     // Rocks.iterateExplosions();
-    client.ships.forEach(function(ship) {
+    client.ships.forEach(function (ship) {
         ship.checkCollisions();
     });
     // if ( move_left) {
@@ -462,16 +467,16 @@ function onFrame(event) {
     moveShots();
 
     // Might be a performance hit
-    if(ANIMATE_STARS && (event.count % 4 === 0)) {
+    if (ANIMATE_STARS && (event.count % 4 === 0)) {
         //animateSky();
     }
 }
 
 function renderShips() {
-    if(typeof client.ships === 'undefined') {
+    if (typeof client.ships === 'undefined') {
         return 0;
     }
-    client.ships.forEach(function(ship) {
+    client.ships.forEach(function (ship) {
 
         //console.log('rendering');
 
@@ -499,11 +504,11 @@ function renderShips() {
 
 function moveShots() {
     // Update shot position
-    client.shots.forEach(function(shot, i) {
+    client.shots.forEach(function (shot, i) {
 
-        if(!shot) return;
+        if (!shot) return;
 
-        if(shot.expired()) {
+        if (shot.expired()) {
             shot.remove();
             client.shots.splice(i, 1);
             return;
@@ -515,7 +520,7 @@ function moveShots() {
 }
 
 function renderShots() {
-    client.shots.forEach(function(shot) {
+    client.shots.forEach(function (shot) {
 
         shot.group.position = new Point(shot.pos.x, shot.pos.y);
 
@@ -537,22 +542,22 @@ player = {
 function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');
     var color = '#';
-    for (var i = 0; i < 6; i++ ) {
+    for (var i = 0; i < 6; i++) {
         color += letters[Math.round(Math.random() * 15)];
     }
     return color;
 }
 
-function rgb2hex(rgb){
+function rgb2hex(rgb) {
     rgb = rgb.match(/^rgba?[\s+]?\([\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?,[\s+]?(\d+)[\s+]?/i);
     return (rgb && rgb.length === 4) ? "#" +
-        ("0" + parseInt(rgb[1],10).toString(16)).slice(-2) +
-        ("0" + parseInt(rgb[2],10).toString(16)).slice(-2) +
-        ("0" + parseInt(rgb[3],10).toString(16)).slice(-2) : '';
+        ("0" + parseInt(rgb[1], 10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[2], 10).toString(16)).slice(-2) +
+        ("0" + parseInt(rgb[3], 10).toString(16)).slice(-2) : '';
 }
 
-function minimumBrightness(h,s,l, min) {
-    return [h,s,Math.max(l, min)]
+function minimumBrightness(h, s, l, min) {
+    return [h, s, Math.max(l, min)]
 }
 
 function hsvToRgb(h, s, v) {
@@ -565,15 +570,27 @@ function hsvToRgb(h, s, v) {
     var t = v * (1 - (1 - f) * s);
 
     switch (i % 6) {
-        case 0: r = v, g = t, b = p; break;
-        case 1: r = q, g = v, b = p; break;
-        case 2: r = p, g = v, b = t; break;
-        case 3: r = p, g = q, b = v; break;
-        case 4: r = t, g = p, b = v; break;
-        case 5: r = v, g = p, b = q; break;
+        case 0:
+            r = v, g = t, b = p;
+            break;
+        case 1:
+            r = q, g = v, b = p;
+            break;
+        case 2:
+            r = p, g = v, b = t;
+            break;
+        case 3:
+            r = p, g = q, b = v;
+            break;
+        case 4:
+            r = t, g = p, b = v;
+            break;
+        case 5:
+            r = v, g = p, b = q;
+            break;
     }
 
-    return [ r * 255, g * 255, b * 255 ];
+    return [r * 255, g * 255, b * 255];
 }
 
 function onKeyDown(event) {
@@ -625,37 +642,65 @@ function onKeyUp(event) {
     }
 }
 
-$(document).ready( function() {
+$(document).ready(function () {
 
     // Stop left and right keyboard events from propagating.
 
-    $(document).keydown(function(e) {
-        if(e.key === 'F8') {
+    $(document).keydown(function (e) {
+        if (e.key === 'F8') {
             $('#setup').fadeToggle(200);
         }
     });
 
-    socket.on('scoreboard add player', function(player) {
+    var scoreboard = $('#scoreboard-players');
+    var scoreboard_timer = $('#scoreboard-timer');
+    var scoreboard_interval;
+
+    socket.on('scoreboard add player', function (player) {
         addPlayer(player);
     });
 
-    socket.on('scoreboard remove player', function(id) {
+    socket.on('scoreboard remove player', function (id) {
         removePlayer(id);
     });
 
-    socket.on('scoreboard update player', function(player) {
+    socket.on('scoreboard update player', function (player) {
         updatePlayer(player);
+    });
+
+    socket.on('scoreboard reset', function () {
+        $('.scoreboard-points').html('0');
+        $('.scoreboard-kills').html('0');
+        $('.scoreboard-deaths').html('0');
+    });
+
+    socket.on('gameinfo', function (text) {
+        $('#gameinfo').html(text);
+    });
+
+    socket.on('game round start', function (data) {
+        REMAINING_TIME = data;
+        showRemainingTime();
+
+        client.ships.forEach(function (ship) {
+            ship.respawn();
+        });
+    });
+
+    socket.on('game round end', function (data) {
+        REMAINING_TIME = data;
+        showTimeUntilNextRound();
     });
 
     function addPlayer(player) {
         var starthtml = '<div id="' + player.id + '" class="scoreboard-player" data-sid=' + player.score + '>';
-        var name = '<span style="color:'+player.color+'" class="scoreboard-name">'+player.name+'</span>'
+        var name = '<span style="color:' + player.color + '" class="scoreboard-name">' + player.name + '</span>'
         var points = '<span class="scoreboard-points">' + player.score + '</span>';
         var kills = '<span class="scoreboard-kills">' + player.kills + '</span>';
         var deaths = '<span class="scoreboard-deaths">' + player.deaths + '</span>';
         var endhtml = '</div>';
         $('#waiting-for-players').remove();
-        $('#scoreboard-players').append(starthtml + name + points + kills + deaths + endhtml);
+        scoreboard.append(starthtml + name + points + kills + deaths + endhtml);
 
         sortScoreboard();
     }
@@ -663,8 +708,8 @@ $(document).ready( function() {
     function removePlayer(id) {
         $('#' + id).remove();
 
-        if($('#scoreboard-players').children().length == 0) {
-            $('#scoreboard-players').append('<span id="waiting-for-players">Waiting for players...</span>');
+        if (scoreboard.children().length === 0) {
+            scoreboard.append('<span id="waiting-for-players">Waiting for players...</span>');
         }
     }
 
@@ -680,9 +725,75 @@ $(document).ready( function() {
 
     function sortScoreboard() {
         // Sort the scoreboard
-        $('.scoreboard-player').sort(function(a,b){
+        scoreboard.sort(function (a, b) {
             return parseInt(b.dataset.sid) > parseInt(a.dataset.sid);
         }).appendTo('#scoreboard-players');
+    }
+
+    var startTime = new Date().getTime();
+
+    function az(i) {
+        if (i < 10) {
+            i = "0" + i
+        }
+        ;
+        return i;
+    }
+
+    function right(str, chr) {
+        return str.slice(str.length - chr, str.length);
+    }
+
+    function calculateRemainingTime() {
+        var timestring;
+
+        if (REMAINING_TIME < 0) {
+            REMAINING_TIME = 0;
+        }
+
+        //timestring = az(now.getMinutes()) + ':' + az(now.getSeconds());
+
+        var remaining_seconds = Math.floor(REMAINING_TIME / 1000);
+
+        var seconds = right(('0' + (remaining_seconds % 60)), 2);
+        timestring = Math.floor(remaining_seconds / 60) + ':' + seconds;
+        var string = 'Time remaining: ' + timestring;
+        scoreboard_timer.html(string);
+
+        REMAINING_TIME -= 1000;
+    }
+
+    function showRemainingTime() {
+        clearInterval(scoreboard_interval);
+        REMAINING_TIME -= 1000;
+        calculateRemainingTime();
+        scoreboard_interval = setInterval(calculateRemainingTime, 1000);
+    }
+
+    showRemainingTime();
+
+    function calculateTimeUntilNextRound() {
+        var timestring;
+
+        if (REMAINING_TIME < 0) {
+            REMAINING_TIME = 0;
+        }
+
+        var remaining_seconds = Math.floor(REMAINING_TIME / 1000);
+
+        var seconds = right(('0' + (remaining_seconds % 60)), 2);
+        timestring = Math.floor(remaining_seconds / 60) + ':' + seconds;
+        var string = 'Next round starts in: ' + timestring;
+        scoreboard_timer.html(string);
+
+        REMAINING_TIME -= 1000;
+    }
+
+    function showTimeUntilNextRound() {
+        clearInterval(scoreboard_interval);
+        REMAINING_TIME -= 1000;
+        calculateTimeUntilNextRound();
+        scoreboard_interval = setInterval(calculateTimeUntilNextRound, 1000);
     }
 
     var colorpicker = $('#colorpicker');
@@ -693,20 +804,20 @@ $(document).ready( function() {
         layout: 'hex',
         colorScheme: 'dark',
         color: '21ebeb',
-        onSubmit:function(hsb,hex,rgb,el) {
+        onSubmit: function (hsb, hex, rgb, el) {
             //console.log(hsb);
             // Give the selected color a minimum brightness to prevent exploiting black, nonvisible ships
             var adjusted = minimumBrightness(hsb.h, hsb.s, hsb.b, 30);
             //console.log('minimumBrightness:');
             //console.log(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
-            adjusted = hsvToRgb(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
+            adjusted = hsvToRgb(adjusted[0] / 360, adjusted[1] / 100, adjusted[2] / 100);
             //console.log('hsvToRgb result:');
             //console.log (adjusted);
             adjusted = [Math.floor(adjusted[0]), Math.floor(adjusted[1]), Math.floor(adjusted[2])];
             //console.log(adjusted);
             //console.log('Initial RGB:');
             //console.log(rgb);
-            adjusted = rgb2hex('rgb('+adjusted[0]+', '+adjusted[1]+', '+adjusted[2]+')');
+            adjusted = rgb2hex('rgb(' + adjusted[0] + ', ' + adjusted[1] + ', ' + adjusted[2] + ')');
             //console.log(adjusted);
             //console.log('rgb('+adjusted[0]+', '+adjusted[1]+', '+adjusted[2]+')');
             //console.log(colorpicker.css('background-color'))
@@ -720,25 +831,25 @@ $(document).ready( function() {
         }
     });
 
-    colorpicker.on('onSubmit', function() {
+    colorpicker.on('onSubmit', function () {
         console.log("submit");
         $(this).colpickHide();
     });
 
-    $('#confirm-playerinfo').click(function() {
-        if($('#playername').val() == '') {
+    $('#confirm-playerinfo').click(function () {
+        if ($('#playername').val() == '') {
             return false;
         }
         player.name = $('#playername').val();
         player.color = rgb2hex(colorpicker.css('background-color'));
         //console.log(colorpicker.css('background-color'))
-        $('#playerinfo').fadeOut(200, function() {
+        $('#playerinfo').fadeOut(200, function () {
             $('#shipinfo').fadeIn(200);
         });
     });
 
-    $('#confirm-shipinfo').click(function() {
-        if(typeof ship === 'undefined') {
+    $('#confirm-shipinfo').click(function () {
+        if (typeof ship === 'undefined') {
             console.log("Buidl a shiperl plx!");
             return false;
         }
@@ -805,19 +916,21 @@ function Ship(options) {
             length: 1
         }),
 
-        turnLeft: function() {
+        destroyedShip: assets.destroyedShip.clone(),
+
+        turnLeft: function () {
             console.log('turnleft');
             group.rotate(-3);
             //this.angle -= 3;
         },
 
-        turnRight: function() {
+        turnRight: function () {
             console.log('turnright');
             group.rotate(3);
             //this.angle += 3;
         },
 
-        thrust: function() {
+        thrust: function () {
             //thrust.visible = true;
 
             this.vector = this.vector.add(new paper.Point({
@@ -830,21 +943,21 @@ function Ship(options) {
             }
         },
 
-        stop: function() {
+        stop: function () {
             this.vector.length = 0;
         },
 
-        fire: function() {
+        fire: function () {
             if (!this.dying)
                 Shot.fire(this.item.position, this.angle);
         },
 
-        coast: function() {
+        coast: function () {
             //thrust.visible = false;
             this.vector = this.vector.multiply(.992);
         },
 
-        move: function() {
+        move: function () {
             //console.log(this.vector);
             group.position = group.position.add(this.vector);
             playername.position = group.position;
@@ -852,14 +965,14 @@ function Ship(options) {
             //keepInView(group);
         },
 
-        moveTo: function(position) {
+        moveTo: function (position) {
             group.position = position;
             playername.position = [group.position.x, group.position.y - 44];
             protectionCircle.position = group.position;
             //keepInView(group);
         },
 
-        turnTo: function(angle) {
+        turnTo: function (angle) {
             //this.angle = angle;
 
             //group.rotation = angle;
@@ -870,13 +983,12 @@ function Ship(options) {
             //keepInView(group);
         },
 
-        hitBy: function(id) {
+        hitBy: function (id) {
             //this.item.strokeColor = "red";
             this.destroy();
         },
 
-        destroy: function() {
-            this.destroyedShip = assets.destroyedShip.clone();
+        destroy: function () {
             this.destroyedShip.position = this.item.position;
             this.destroyedShip.visible = true;
             this.destroyedShip.strokeColor = this.color;
@@ -885,30 +997,34 @@ function Ship(options) {
             this.stop();
             //this.item.position = paper.view.center;
             this.dying = true;
-            this.respawn();
-        },
 
-        respawn: function() {
             var ship = this;
-            setTimeout(function() {
-                ship.item.visible = true;
-                ship.playername.visible = true;
-                //ship.stop();
-                //ship.item.position = new paper.Point(Math.floor(Math.random() * map_width), Math.floor(Math.random() * map_height));
-                ship.dying = false;
-                ship.destroyedShip.visible = false;
-                ship.setColor(ship.color);
-                ship.spawnProtection();
+            setTimeout(function () {
+                ship.respawn();
             }, SHIP_RESPAWN_TIME + 10);
         },
 
-        spawnProtection: function() {
+        respawn: function () {
+
+            var ship = this;
+            ship.item.visible = true;
+            this.playername.visible = true;
+            this.stop();
+            this.dying = false;
+            this.destroyedShip.visible = false;
+            this.setColor(ship.color);
+
+            this.spawnProtection();
+
+        },
+
+        spawnProtection: function () {
 
             var circle = protectionCircle;
             circle.visible = true;
 
             //Deactivate after x seconds
-            setTimeout(function() {
+            setTimeout(function () {
                 circle.visible = false;
                 console.log('spawn protection deactivated');
             }, SHIP_SPAWN_PROTECTION);
@@ -916,11 +1032,11 @@ function Ship(options) {
             return console.log('spawn protection activated');
         },
 
-        setColor: function(color) {
+        setColor: function (color) {
             group.strokeColor = color;
         },
 
-        checkCollisions: function() {
+        checkCollisions: function () {
 
             // move rocks and do a hit-test
             // between bounding rect of rocks and ship
@@ -962,10 +1078,10 @@ function Shot(args) {
     function checkHits(bullet) {
         for (var r = 0; r < Rocks.children.length; r++) {
             var rock = Rocks.children[r];
-            if (rock.bounds.contains(bullet.position) ) {
+            if (rock.bounds.contains(bullet.position)) {
                 Score.update(rock.shapeType);
                 Rocks.explode(rock);
-                if (rock.shapeType < Rocks.TYPE_SMALL ) {
+                if (rock.shapeType < Rocks.TYPE_SMALL) {
                     for (var j = 0; j < 2; j++) {
                         Rocks.add(1, rock.shapeType + 4, rock.position);
                     }
@@ -996,10 +1112,10 @@ function Shot(args) {
             }
         })
         ,
-        expired: function() {
+        expired: function () {
             return this.bullet.data.timeToDie < 1;
         },
-        move: function() {
+        move: function () {
 
             this.bullet.data.timeToDie--;
             if (this.bullet.data.timeToDie < 1) {
@@ -1013,7 +1129,7 @@ function Shot(args) {
             }
 
         },
-        remove: function() {
+        remove: function () {
             //console.log('shot end pos: ' + this.bullet.position.x + ', ' + this.bullet.position.y);
             this.bullet.remove();
         }

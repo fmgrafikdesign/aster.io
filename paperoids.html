@@ -28,49 +28,55 @@
 </script>
 
 <body>
-    <canvas id="canvas" width="1920" resize height="1080"></canvas>
+<canvas id="canvas" width="1920" resize height="1080"></canvas>
 
-    <!-- Stars via css -->
+<!-- Stars via css -->
 
-    <div class="background">
-        <div class="stars"></div>
-        <div class="twinkling"></div>
-    </div>
+<div class="background">
+    <div class="stars"></div>
+    <div class="twinkling"></div>
+</div>
 
 
-    <div id="setup" class="setup">
-        <div id="playerinfo" class="playerinfo setup-box">
-            <h1>Welcome to <strong>aster.io</strong></h1>
-            <div class="playerinfo-wrapper">
-                <div class="colorpicker" id="colorpicker"></div>
-                <div class="namepicker">
-                    <input type="text" id="playername" class="text-input" placeholder="Your Nickname">
-                </div>
-
+<div id="setup" class="setup">
+    <div id="playerinfo" class="playerinfo setup-box">
+        <h1>Welcome to <strong>aster.io</strong></h1>
+        <div class="playerinfo-wrapper">
+            <div class="colorpicker" id="colorpicker"></div>
+            <div class="namepicker">
+                <input type="text" id="playername" class="text-input" placeholder="Your Nickname">
             </div>
-            <div class="start">
-                <button id="confirm-playerinfo" class="button start-button">CONFIRM</button>
-            </div>
+
         </div>
-        <div id="shipinfo" class="shipinfo setup-box d-none">
-            <h1>Draw your <strong>ship</strong></h1>
-            <canvas id="customship" width="300" height="200"></canvas>
-            <button id="confirm-shipinfo" class="button confirm-button">START</button>
+        <div class="start">
+            <button id="confirm-playerinfo" class="button start-button">CONFIRM</button>
         </div>
     </div>
+    <div id="shipinfo" class="shipinfo setup-box d-none">
+        <h1>Draw your <strong>ship</strong></h1>
+        <canvas id="customship" width="300" height="200"></canvas>
+        <button id="confirm-shipinfo" class="button confirm-button">START</button>
+    </div>
+</div>
 
-    <div id="scoreboard" class="scoreboard">
-        <div id="scoreboard-header">
+<div id="scoreboard
+" class="scoreboard">
+    <div id="scoreboard-timer">Time remaining: ?:??</div>
+    <div id="scoreboard-header">
         <span class="scoreboard-name">Name</span>
         <span class="scoreboard-points">Score</span>
         <span class="scoreboard-kills">Kills</span>
         <span class="scoreboard-deaths">Deaths</span>
-        </div>
-        <div id="scoreboard-players">
-        <span id="waiting-for-players">Waiting for players...</span>
-        </div>
     </div>
-    <!--<div id="footer" class="footer"><a href=#">Paperoids</a>.  To Play: <b>&#8592;</b> and <b>&#8594;</b> to rotate.  <b>&#8593;</b> for thrust.  <b>Z</b> to fire. <b>F</b> to show FPS. Follow @<a href="http://twitter.com/#/hirmes">hirmes</a> for updates. Made with the amazing <a href="http://paperjs.org">Paper.js</a></div> -->
+    <div id="scoreboard-players">
+        <span id="waiting-for-players">Waiting for players...</span>
+    </div>
+</div>
+
+<div id="gameinfo" class="gameinfo debug">
+
+</div>
+<!--<div id="footer" class="footer"><a href=#">Paperoids</a>.  To Play: <b>&#8592;</b> and <b>&#8594;</b> to rotate.  <b>&#8593;</b> for thrust.  <b>Z</b> to fire. <b>F</b> to show FPS. Follow @<a href="http://twitter.com/#/hirmes">hirmes</a> for updates. Made with the amazing <a href="http://paperjs.org">Paper.js</a></div> -->
 
 </body>
 </html>
