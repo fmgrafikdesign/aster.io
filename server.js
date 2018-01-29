@@ -61,10 +61,11 @@ var POINTS_PER_ASTEROID = 10;
 var map_width = 1920;
 var map_height = 1080;
 
-var GAME_ROUND_LENGTH = 61 * 3 * 1000 // Duration of one round (in Milliseconds)
-//var GAME_ROUND_LENGTH = 5 * 1000 // DEBUG Duration of one round (in Milliseconds)
-var GAME_ROUND_INBETWEEN = 11 * 1000 // Time between two rounds (in Milliseconds)
+var GAME_ROUND_LENGTH = 60 * 3 * 1000 // Duration of one round (in Milliseconds)
+//var GAME_ROUND_LENGTH = 10 * 1000 // DEBUG Duration of one round (in Milliseconds)
+var GAME_ROUND_INBETWEEN = 16 * 1000 // Time between two rounds (in Milliseconds)
 var GAME_ROUND_START_TIMESTAMP = 0;
+var GAME_ROUND_END_TIMESTAMP = 0;
 
 var UP = 0;
 var RIGHT = 1;
@@ -234,7 +235,7 @@ io.on('connection', function (socket) {
         remaining_time: remaining_time
     };
 
-    socket.emit('gameinfo', remaining_time);
+    //socket.emit('gameinfo', remaining_time);
 
     socket.emit('game state variables', gameinfo);
 
@@ -317,8 +318,25 @@ io.on('connection', function (socket) {
 
     });
 
+    socket.on('request round state', function() {
+        if(game.running) {
+            var remaining_time = GAME_ROUND_LENGTH - (new Date().getTime() - GAME_ROUND_START_TIMESTAMP);
+            socket.emit('game round info', {
+                running: true,
+                remaining_time:  remaining_time
+            });
+        } else {
+            var remaining_time = GAME_ROUND_INBETWEEN - (new Date().getTime() - GAME_ROUND_END_TIMESTAMP);
+            socket.emit('game round info', {
+                running: false,
+                remaining_time:  remaining_time
+            });
+        }
+    });
+
 
     socket.on('player movement stop', function (dir) {
+        if (!game.running) return;
         //console.log('received player ' + socket.id + ' movement: ' + movement.up + ' ' + movement.down + ' ' + movement.left + ' ' + movement.right + ' ' + movement.shooting);
 
         // Update player movement
@@ -433,6 +451,14 @@ GameServer.prototype = {
 
             }
         });
+    },
+
+    stopShipMovement: function (ship) {
+        ship.movement.up = false;
+        ship.movement.down = false;
+        ship.movement.left = false;
+        ship.movement.right = false;
+        ship.movement.shooting = false;
     },
 
 
@@ -678,6 +704,7 @@ GameServer.prototype = {
     endRound: function () {
         // Disable player control & hitchecks
         this.running = false;
+        var game = this;
         console.log('Round has ended');
 
         // Send "game round end" to clients
@@ -685,10 +712,15 @@ GameServer.prototype = {
         // DEBUG
         //io.emit('gameinfo', 'Round has ended');
 
-        // Sort Scoreboard & get the winner
+        // Let ships movement fade out
+        this.ships.forEach(function(ship) {
+            game.stopShipMovement(ship);
+        });
+
+        // Set round end timestamp
+        GAME_ROUND_END_TIMESTAMP = new Date().getTime();
 
         // Tell the game when to start again
-        var game = this;
         setTimeout(function () {
             game.startRound();
         }, GAME_ROUND_INBETWEEN);
@@ -826,7 +858,6 @@ function Scoreboard() {
                 player.kills = 0;
                 player.deaths = 0;
             });
-            io.emit('scoreboard reset');
 
         }
     }

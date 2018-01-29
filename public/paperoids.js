@@ -35,6 +35,7 @@ var socket = io();
 socket.on('acknowledge new player', function (info) {
     //console.log('server acknowledged you');
     $('#shipinfo').fadeOut(200);
+    $('#scoreboard').fadeIn(200);
 });
 
 socket.on('game state variables', function (info) {
@@ -649,12 +650,15 @@ $(document).ready(function () {
     $(document).keydown(function (e) {
         if (e.key === 'F8') {
             $('#setup').fadeToggle(200);
+            $('#scoreboard').fadeToggle(200);
         }
     });
 
     var scoreboard = $('#scoreboard-players');
     var scoreboard_timer = $('#scoreboard-timer');
     var scoreboard_interval;
+
+    socket.emit('request round state');
 
     socket.on('scoreboard add player', function (player) {
         addPlayer(player);
@@ -668,30 +672,48 @@ $(document).ready(function () {
         updatePlayer(player);
     });
 
-    socket.on('scoreboard reset', function () {
-        $('.scoreboard-points').html('0');
-        $('.scoreboard-kills').html('0');
-        $('.scoreboard-deaths').html('0');
-    });
-
     socket.on('gameinfo', function (text) {
         $('#gameinfo').html(text);
     });
 
+    socket.on('game round info', function(data) {
+        REMAINING_TIME = data.remaining_time;
+        if(data.running) {
+            showRemainingTime();
+        } else {
+            showTimeUntilNextRound();
+        }
+    });
+
     socket.on('game round start', function (data) {
-        REMAINING_TIME = data;
-        showRemainingTime();
 
         client.ships.forEach(function (ship) {
             ship.respawn();
         });
+
+        $('#scoreboard').fadeOut(200, function() {
+            REMAINING_TIME = data;
+            showRemainingTime();
+            $('.scoreboard-points').html('0');
+            $('.scoreboard-kills').html('0');
+            $('.scoreboard-deaths').html('0');
+            $(this).removeClass('end');
+            $(this).fadeIn(200);
+        });
     });
 
     socket.on('game round end', function (data) {
-        REMAINING_TIME = data;
-        showTimeUntilNextRound();
+
+        $('#scoreboard').fadeOut(200, function() {
+            REMAINING_TIME = data;
+            showTimeUntilNextRound();
+            $(this).addClass('end');
+            $(this).fadeIn(200);
+        });
+
     });
 
+    //Scoreboard only
     function addPlayer(player) {
         var starthtml = '<div id="' + player.id + '" class="scoreboard-player" data-sid=' + player.score + '>';
         var name = '<span style="color:' + player.color + '" class="scoreboard-name">' + player.name + '</span>'
@@ -705,6 +727,7 @@ $(document).ready(function () {
         sortScoreboard();
     }
 
+    //Scoreboard only
     function removePlayer(id) {
         $('#' + id).remove();
 
@@ -713,6 +736,7 @@ $(document).ready(function () {
         }
     }
 
+    //Scoreboard only
     function updatePlayer(player) {
         $('#' + player.id).attr('data-sid', player.score);
         $('#' + player.id + ' .scoreboard-points').html(player.score);
@@ -728,16 +752,6 @@ $(document).ready(function () {
         scoreboard.sort(function (a, b) {
             return parseInt(b.dataset.sid) > parseInt(a.dataset.sid);
         }).appendTo('#scoreboard-players');
-    }
-
-    var startTime = new Date().getTime();
-
-    function az(i) {
-        if (i < 10) {
-            i = "0" + i
-        }
-        ;
-        return i;
     }
 
     function right(str, chr) {
@@ -765,7 +779,7 @@ $(document).ready(function () {
 
     function showRemainingTime() {
         clearInterval(scoreboard_interval);
-        REMAINING_TIME -= 1000;
+        REMAINING_TIME -= 1500;
         calculateRemainingTime();
         scoreboard_interval = setInterval(calculateRemainingTime, 1000);
     }
@@ -989,16 +1003,16 @@ function Ship(options) {
         },
 
         destroy: function () {
-            this.destroyedShip.position = this.item.position;
-            this.destroyedShip.visible = true;
-            this.destroyedShip.strokeColor = this.color;
-            this.item.visible = false;
-            this.playername.visible = false;
-            this.stop();
-            //this.item.position = paper.view.center;
-            this.dying = true;
-
             var ship = this;
+            ship.destroyedShip.position = this.item.position;
+            ship.destroyedShip.visible = true;
+            ship.destroyedShip.strokeColor = this.color;
+            ship.item.visible = false;
+            ship.playername.visible = false;
+            ship.stop();
+            //this.item.position = paper.view.center;
+            ship.dying = true;
+
             setTimeout(function () {
                 ship.respawn();
             }, SHIP_RESPAWN_TIME + 10);
