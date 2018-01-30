@@ -259,7 +259,7 @@ io.on('connection', function (socket) {
         //console.log('rgb', color);
         color = rgbToHsv(color.r, color.g, color.b);
         //console.log('hsv', color);
-        color = minimumBrightness(color[0] * 360, color[1] * 100, color[2] * 100, 30);
+        color = minimumBrightness(color[0] * 360, color[1] * 100, color[2] * 100, 35);
         //console.log('hsv minimum Brightness', color);
         color = hsvToRgb(color[0] / 360, color[1] / 100, color[2] / 100);
         color = [Math.floor(color[0]), Math.floor(color[1]), Math.floor(color[2])];
@@ -347,6 +347,10 @@ io.on('connection', function (socket) {
         socket.emit('game state ships', shipsToPlayer);
     });
 
+    socket.on('request ships number', function() {
+        socket.emit('game ships number', game.ships.length);
+    });
+
 
     socket.on('player movement stop', function (dir) {
         if (!game.running) return;
@@ -366,7 +370,7 @@ io.on('connection', function (socket) {
         game.removeShots(socket.id);
         score.removePlayer(socket.id);
         io.emit('player disconnected', socket.id);
-        console.log('player disconnected.');
+        console.log('player "' + socket.id + '" disconnected.');
     })
 });
 

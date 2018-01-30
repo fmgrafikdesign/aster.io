@@ -145,6 +145,43 @@ function rgb2hex(rgb) {
         ("0" + parseInt(rgb[3], 10).toString(16)).slice(-2) : '';
 }
 
+function minimumBrightness(h, s, l, min) {
+    return [h, s, Math.max(l, min)]
+}
+
+function hsvToRgb(h, s, v) {
+    var r, g, b;
+
+    var i = Math.floor(h * 6);
+    var f = h * 6 - i;
+    var p = v * (1 - s);
+    var q = v * (1 - f * s);
+    var t = v * (1 - (1 - f) * s);
+
+    switch (i % 6) {
+        case 0:
+            r = v, g = t, b = p;
+            break;
+        case 1:
+            r = q, g = v, b = p;
+            break;
+        case 2:
+            r = p, g = v, b = t;
+            break;
+        case 3:
+            r = p, g = q, b = v;
+            break;
+        case 4:
+            r = t, g = p, b = v;
+            break;
+        case 5:
+            r = v, g = p, b = q;
+            break;
+    }
+
+    return [r * 255, g * 255, b * 255];
+}
+
 // Adjust this for touch controls
 function onKeyDown(event) {
     //console.log(event);
@@ -207,7 +244,28 @@ $(document).ready(function () {
         colorScheme: 'dark',
         color: '21ebeb',
         onSubmit: function (hsb, hex, rgb, el) {
-            $(el).css('background-color', '#' + hex);
+            //console.log(hsb);
+            // Give the selected color a minimum brightness to prevent exploiting black, nonvisible ships
+            var adjusted = minimumBrightness(hsb.h, hsb.s, hsb.b, 35);
+            //console.log('minimumBrightness:');
+            //console.log(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
+            adjusted = hsvToRgb(adjusted[0] / 360, adjusted[1] / 100, adjusted[2] / 100);
+            //console.log('hsvToRgb result:');
+            //console.log (adjusted);
+            adjusted = [Math.floor(adjusted[0]), Math.floor(adjusted[1]), Math.floor(adjusted[2])];
+            //console.log(adjusted);
+            //console.log('Initial RGB:');
+            //console.log(rgb);
+            adjusted = rgb2hex('rgb(' + adjusted[0] + ', ' + adjusted[1] + ', ' + adjusted[2] + ')');
+            //console.log(adjusted);
+            //console.log('rgb('+adjusted[0]+', '+adjusted[1]+', '+adjusted[2]+')');
+            //console.log(colorpicker.css('background-color'))
+            //console.log('hex:');
+            //console.log(adjusted);
+
+            /* Boah war das ätzend */
+
+            $(el).css('background-color', adjusted);
             $(el).colpickHide();
         }
     });
@@ -229,7 +287,7 @@ $(document).ready(function () {
     });
 
     $('#confirm-shipinfo').click(function () {
-        if (typeof ship === 'undefined') {
+        if (typeof ship === 'undefined' || (ship.children.length === 0 )) {
             console.log("Buidl a shiperl plx!");
             return false;
         }

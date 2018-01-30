@@ -19,6 +19,8 @@ var SHOW_PLAYERNAMES = true;
 
 var REMAINING_TIME = 0;
 
+var CLIENT_CHECK_SHIP_AMOUNT = 2000; // How often to check for disconnected in ms
+
 var map_width = 1920;
 var map_height = 1080;
 
@@ -62,7 +64,10 @@ socket.on('game state variables', function (info) {
 socket.on('game state ships', function (ships) {
     //console.log('game state updated');
     //client.ships = ships;
-    //console.log(ships);
+    console.log(ships);
+
+    removePlayers();
+
     ships.forEach(function (ship) {
         //console.log(ship);
         addShip(ship);
@@ -126,7 +131,7 @@ socket.on('ship destroyed', function (data) {
 function addShip(ship, spawnprotection) {
     //console.log('added new ship for new player');
 
-    console.log('received angle ' + ship.angle);
+    //console.log('received angle ' + ship.angle);
 
     var newship = new Ship(ship);
     if (spawnprotection) {
@@ -142,20 +147,30 @@ function addShip(ship, spawnprotection) {
 
 socket.on('player disconnected', function (id) {
     //console.log(id);
-    removeShots(id);
     removePlayer(id);
 });
 
 function removePlayer(id) {
+    removeShots(id);
     client.ships.forEach(function (ship, i) {
         if (ship.id === id) {
             client.ships[i].item.remove();
             client.ships[i].playername.remove();
             client.ships[i].protectionCircle.remove();
             client.ships.splice(i, 1);
-            console.log('player removed');
+            console.log('player "' + socket.id + '" disconnected.');
         }
     })
+}
+
+function removePlayers() {
+    client.ships.forEach(function (ship, i) {
+        client.ships[i].item.remove();
+        client.ships[i].playername.remove();
+        client.ships[i].protectionCircle.remove();
+    });
+
+    client.ships = [];
 }
 
 function removeShots(id) {
@@ -720,6 +735,23 @@ $(document).ready(function () {
 
     });
 
+    /* Check whether player count is still in sync with server every now and then */
+    /* Should prevent desync behaviour if a disconnect event is not received correctly */
+
+    var checkPlayerAmount = function() {
+        socket.emit('request ships number')
+    }
+
+    setInterval(checkPlayerAmount, CLIENT_CHECK_SHIP_AMOUNT);
+
+    socket.on('game ships number', function(number) {
+        //console.log('got ' + number + ', expected ' + client.ships.length);
+        if(number !== client.ships.length) {
+            console.log('Desync detected. Requesting correct ship amount from server');
+            socket.emit('request game state ships');
+        }
+    });
+
     //Scoreboard only
     function addPlayer(player) {
         var starthtml = '<div id="' + player.id + '" class="scoreboard-player" data-sid=' + player.score + '>';
@@ -828,7 +860,7 @@ $(document).ready(function () {
         onSubmit: function (hsb, hex, rgb, el) {
             //console.log(hsb);
             // Give the selected color a minimum brightness to prevent exploiting black, nonvisible ships
-            var adjusted = minimumBrightness(hsb.h, hsb.s, hsb.b, 30);
+            var adjusted = minimumBrightness(hsb.h, hsb.s, hsb.b, 35);
             //console.log('minimumBrightness:');
             //console.log(adjusted[0]/360, adjusted[1]/100, adjusted[2]/100);
             adjusted = hsvToRgb(adjusted[0] / 360, adjusted[1] / 100, adjusted[2] / 100);
@@ -853,7 +885,7 @@ $(document).ready(function () {
     });
 
     colorpicker.on('onSubmit', function () {
-        console.log("submit");
+        //console.log("submit");
         $(this).colpickHide();
     });
 
@@ -870,7 +902,7 @@ $(document).ready(function () {
     });
 
     $('#confirm-shipinfo').click(function () {
-        if (typeof ship === 'undefined') {
+        if (typeof ship === 'undefined' || (ship.children.length === 0 )) {
             console.log("Buidl a shiperl plx!");
             return false;
         }
@@ -879,8 +911,8 @@ $(document).ready(function () {
 
         sent_ship = true;
         player.ship = ship.exportJSON();
-        console.log(ship);
-        console.log(player.ship);
+        //console.log(ship);
+        //console.log(player.ship);
         socket.emit('new player', JSON.stringify(player));
         //console.log(JSON.stringify(player));
 
@@ -905,12 +937,12 @@ function Ship(options) {
         fontWeight: '300',
         fontFamily: 'Source Sans Pro'
     });
-    console.log(playername.content);
+    //console.log(playername.content);
     playername.justification = 'center';
 
     var protectionCircle = assets.spawnProtection.clone();
 
-    console.log(this.protectionCircle);
+    //console.log(this.protectionCircle);
 
     var group = new paper.Group(path);
     group.applyMatrix = false;
@@ -943,13 +975,13 @@ function Ship(options) {
         destroyedShip: assets.destroyedShip.clone(),
 
         turnLeft: function () {
-            console.log('turnleft');
+            //console.log('turnleft');
             group.rotate(-3);
             //this.angle -= 3;
         },
 
         turnRight: function () {
-            console.log('turnright');
+            //console.log('turnright');
             group.rotate(3);
             //this.angle += 3;
         },
@@ -1032,13 +1064,13 @@ function Ship(options) {
 
             var ship = this;
             ship.item.visible = true;
-            this.playername.visible = true;
-            this.stop();
-            this.dying = false;
-            this.destroyedShip.visible = false;
-            this.setColor(ship.color);
+            ship.playername.visible = true;
+            ship.stop();
+            ship.dying = false;
+            ship.destroyedShip.visible = false;
+            ship.setColor(ship.color);
 
-            this.spawnProtection();
+            ship.spawnProtection();
 
         },
 
@@ -1052,7 +1084,7 @@ function Ship(options) {
                 circle.visible = false;
                 //console.log('spawn protection deactivated');
             }, SHIP_SPAWN_PROTECTION);
-            console.log(SHIP_SPAWN_PROTECTION);
+            //console.log(SHIP_SPAWN_PROTECTION);
             //return console.log('spawn protection activated');
         },
 
