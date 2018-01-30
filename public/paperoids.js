@@ -32,6 +32,8 @@ var presets = {
 
 var socket = io();
 
+var sent_ship = false;
+
 socket.on('acknowledge new player', function (info) {
     //console.log('server acknowledged you');
     $('#shipinfo').fadeOut(200);
@@ -660,6 +662,8 @@ $(document).ready(function () {
 
     socket.emit('request round state');
 
+    socket.emit('request game state ships');
+
     socket.on('scoreboard add player', function (player) {
         addPlayer(player);
     });
@@ -672,9 +676,12 @@ $(document).ready(function () {
         updatePlayer(player);
     });
 
+    /*
     socket.on('gameinfo', function (text) {
         $('#gameinfo').html(text);
     });
+    */
+
 
     socket.on('game round info', function(data) {
         REMAINING_TIME = data.remaining_time;
@@ -868,6 +875,9 @@ $(document).ready(function () {
             return false;
         }
 
+        if(sent_ship) return;
+
+        sent_ship = true;
         player.ship = ship.exportJSON();
         console.log(ship);
         console.log(player.ship);
@@ -1040,10 +1050,10 @@ function Ship(options) {
             //Deactivate after x seconds
             setTimeout(function () {
                 circle.visible = false;
-                console.log('spawn protection deactivated');
+                //console.log('spawn protection deactivated');
             }, SHIP_SPAWN_PROTECTION);
             console.log(SHIP_SPAWN_PROTECTION);
-            return console.log('spawn protection activated');
+            //return console.log('spawn protection activated');
         },
 
         setColor: function (color) {

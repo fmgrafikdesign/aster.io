@@ -334,6 +334,19 @@ io.on('connection', function (socket) {
         }
     });
 
+    socket.on('request game state ships', function() {
+        var shipsToPlayer = [];
+
+        game.ships.forEach(function (ship) {
+            //console.log(ship);
+            var shipToPlayer = serializeShip(ship);
+
+            shipsToPlayer.push(shipToPlayer);
+        });
+
+        socket.emit('game state ships', shipsToPlayer);
+    });
+
 
     socket.on('player movement stop', function (dir) {
         if (!game.running) return;
