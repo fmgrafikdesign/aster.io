@@ -64,7 +64,7 @@ socket.on('game state variables', function (info) {
 socket.on('game state ships', function (ships) {
     //console.log('game state updated');
     //client.ships = ships;
-    console.log(ships);
+    //console.log(ships);
 
     removePlayers();
 
@@ -787,8 +787,9 @@ $(document).ready(function () {
     }
 
     function sortScoreboard() {
+        // console.log('sorting scoreboard...');
         // Sort the scoreboard
-        scoreboard.sort(function (a, b) {
+        $('div#scoreboard-players div').sort(function (a, b) {
             return parseInt(b.dataset.sid) > parseInt(a.dataset.sid);
         }).appendTo('#scoreboard-players');
     }
@@ -1046,6 +1047,8 @@ function Ship(options) {
 
         destroy: function () {
             var ship = this;
+            console.log('destroy called');
+            ship.destroyedShip = assets.destroyedShip.clone();
             ship.destroyedShip.position = this.item.position;
             ship.destroyedShip.visible = true;
             ship.destroyedShip.strokeColor = this.color;
@@ -1062,6 +1065,7 @@ function Ship(options) {
 
         respawn: function () {
 
+            console.log('respawn called');
             var ship = this;
             ship.item.visible = true;
             ship.playername.visible = true;
@@ -1098,7 +1102,7 @@ function Ship(options) {
             // between bounding rect of rocks and ship
 
             if (this.dying) {
-                //console.log('dieing');
+                console.log('dieing');
                 var children = this.destroyedShip.children;
                 children[0].position.x++;
                 children[1].position.x--;
@@ -1158,7 +1162,7 @@ function Shot(args) {
         vector: vec,
         bullet: new paper.Path.Circle({
             center: pos.add(vec),
-            radius: 2,
+            radius: 3,
             fillColor: args.color,
             strokeColor: args.color,
             strokeWidth: 0,

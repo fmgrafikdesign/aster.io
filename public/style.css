@@ -312,6 +312,7 @@ span.scoreboard-name {
 
 .stars {
     background:#000 url(/stars.png) repeat top center;
+    opacity: .65;
     z-index:0;
 }
 
