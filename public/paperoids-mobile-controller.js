@@ -324,10 +324,10 @@ $(document).ready(function () {
 
     });
 
-    $('#shoot-button').on('tapend', function () {
-        $(this).removeClass('active');
-        socket.emit('player movement stop', FIRE);
-    });
+    // $('#shoot-button').on('tapend', function () {
+    //     $(this).removeClass('active');
+    //     socket.emit('player movement stop', FIRE);
+    // });
 
     //TODO: Check ship color to have at least a certain amount of brightness
 

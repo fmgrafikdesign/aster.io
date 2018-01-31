@@ -659,15 +659,21 @@ function onKeyUp(event) {
         socket.emit('player movement stop', DOWN);
         return move_down = true;
     }
-    if (event.key === 'space' && !event.event.repeat) {
-        socket.emit('player movement stop', FIRE);
-        return shoot = true;
-    }
+    // if (event.key === 'space' && !event.event.repeat) {
+    //     socket.emit('player movement stop', FIRE);
+    //     return shoot = true;
+    // }
 }
 
 $(document).ready(function () {
 
-    // Stop left and right keyboard events from propagating.
+    // Set absolute view size for different resolutions
+    paper.view.setViewSize([1920,1080]);
+
+    // Override the canvas width and height
+    var canvas = $('#canvas');
+    canvas.width("100vw");
+    canvas.height("100vh");
 
     $(document).keydown(function (e) {
         if (e.key === 'F8') {
