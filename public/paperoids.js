@@ -128,6 +128,11 @@ socket.on('ship destroyed', function (data) {
     });
 });
 
+socket.on('disconnect', function() {
+    console.log('lost connection to server, trying to reload...');
+    location.reload();
+});
+
 function addShip(ship, spawnprotection) {
     //console.log('added new ship for new player');
 
