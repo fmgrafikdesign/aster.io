@@ -38,8 +38,9 @@ var sent_ship = false;
 
 socket.on('acknowledge new player', function (info) {
     //console.log('server acknowledged you');
-    $('#shipinfo').fadeOut(200);
-    $('#scoreboard').fadeIn(200);
+    $('#shipinfo').fadeOut(200, function() {
+        $('#gameinfo').fadeIn(400);
+    });
 });
 
 socket.on('game state variables', function (info) {
@@ -724,7 +725,7 @@ $(document).ready(function () {
             ship.respawn();
         });
 
-        $('#scoreboard').fadeOut(200, function() {
+        $('#gameinfo').fadeOut(200, function() {
             REMAINING_TIME = data;
             showRemainingTime();
             $('.scoreboard-points').html('0');
@@ -737,12 +738,18 @@ $(document).ready(function () {
 
     socket.on('game round end', function (data) {
 
-        $('#scoreboard').fadeOut(200, function() {
+        $('#scoreboard-timer').fadeOut(200);
+        $('#gameinfo').fadeOut(200, function() {
             REMAINING_TIME = data;
             showTimeUntilNextRound();
             $(this).addClass('end');
             $(this).fadeIn(200);
+
         });
+
+        setTimeout(function() {
+            $('#scoreboard-timer').fadeIn(200);
+        }, 3500);
 
     });
 
@@ -822,7 +829,7 @@ $(document).ready(function () {
 
         var seconds = right(('0' + (remaining_seconds % 60)), 2);
         timestring = Math.floor(remaining_seconds / 60) + ':' + seconds;
-        var string = 'Time remaining: ' + timestring;
+        var string = '<span class="">Time remaining:</span> ' + timestring;
         scoreboard_timer.html(string);
 
         REMAINING_TIME -= 1000;

@@ -37,8 +37,6 @@
     <div class="twinkling"></div>
 </div>
 
-<div id="remaining-time" class="remaining-time">
-
 </div>
 
 <div id="setup" class="setup">
@@ -62,20 +60,26 @@
     </div>
 </div>
 
-<div id="scoreboard" class="scoreboard d-none">
-    <div id="scoreboard-timer">Time remaining: ?:??</div>
-    <div id="scoreboard-header">
-        <span class="scoreboard-name">Name</span>
-        <span class="">Score</span>
-        <span class="">Kills</span>
-        <span class="">Deaths</span>
-    </div>
-    <div id="scoreboard-players">
-        <span id="waiting-for-players">Waiting for players...</span>
-    </div>
-</div>
+<div id="gameinfo" class="d-none gameinfo">
 
-<!--<div id="gameinfo" class="gameinfo debug">-->
+    <div id="scoreboard-timer" class="remaining-time"></div>
+
+        <div id="scoreboard" class="scoreboard">
+            <!--<div id="scoreboard-timer">Time remaining: ?:??</div>-->
+            <div id="scoreboard-header">
+                <span class="scoreboard-name">Name</span>
+                <span class="">Score</span>
+                <span class="">Kills</span>
+                <span class="">Deaths</span>
+            </div>
+            <div id="scoreboard-players">
+                <span id="waiting-for-players">Waiting for players...</span>
+            </div>
+        </div>
+
+    </div>
+
+    <!--<div id="gameinfo" class="gameinfo debug">-->
 
 </div>
 
