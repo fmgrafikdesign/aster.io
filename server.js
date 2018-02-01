@@ -42,9 +42,10 @@ var SHOW_PERFORMANCE = false;
 
 var LIFES = 3; // Lifes per player
 var ASTEROIDS = 10; // Number of Asteroids on screen
-var SHOT_DELAY = 12; // delay between shots
+var SHOT_DELAY = 200; // delay between shots in ms
 var SHOT_SPEED = 5; // How many px does a shot move per tick
 var SHOT_LIFESPAN = 120; // How long a shot lives
+var SHOT_INHERIT_FACTOR = 0.7; // How much speed should a shot inherit from the firing ship
 
 var SHIP_TOPSPEED = 6; // Topspeed of ship
 var SHIP_ACCELERATION = 0.22; // Acceleration of ship
@@ -291,6 +292,9 @@ io.on('connection', function (socket) {
         // Add ship to the server
         game.addShip(ship);
 
+        // Track last shots to enforce delay between shots
+        game.canshoot[socket.id] = true;
+
         // Add player to scoreboard
         score.addPlayer(socket.id, player.name, color);
 
@@ -380,6 +384,7 @@ function GameServer() {
 
     // shots obj: owner-id, color, pos.x, pos.y, angle
     this.shots = [];
+    this.canshoot = {};
 
     this.lastShotId = 0;
 
@@ -453,9 +458,15 @@ GameServer.prototype = {
                     ship.movement.left = move;
                 } else if (dir === RIGHT) {
                     ship.movement.right = move;
-                } else if (dir === FIRE && move) {
+                } else if (dir === FIRE && move && game.canshoot[ship.id]) {
                     ship.movement.shooting = move;
+                    console.log('adding shot');
                     game.addShot(ship);
+                    game.canshoot[ship.id] = false;
+
+                    setTimeout(function() {
+                        game.canshoot[ship.id] = true;
+                    }, SHOT_DELAY);
                 }
                 //ship.movement = movement;
                 //console.log(ship.movement);
@@ -487,19 +498,12 @@ GameServer.prototype = {
             return false;
         }
 
-        var vector = new paper.Point({
-            angle: ship.angle,
-            length: (SHIP_SIZE / 2) - 3
-        });
+        // Add shot to game server
+        this.shots.push(new Shot(ship));
 
-        var shot = {
-            owner: ship.id,
-            color: ship.color,
-            position: ship.item.position.add(vector),
-            angle: ship.angle,
-        }
-        this.shots.push(new Shot(shot));
-        io.emit('shot added', ship.id);
+        // Refresh shotdelay for shooter
+        this.canshoot[ship.id] = SHOT_DELAY;
+
         //console.log('shot added');
     },
 
@@ -601,6 +605,8 @@ GameServer.prototype = {
             //console.log(shot.time_to_live);
         });
     },
+
+
 
     // Detect shot collision
     detectShotCollision: function () {
@@ -1085,57 +1091,64 @@ function Ship(options) {
     };
 };
 
-function Shot(args) {
-    //var group = new paper.Group();
-    var pos = args.position;
+
+function Shot(ship) {
+
+    // Offset the point so it fires from the tip of the ship
+    var shot_offset = new paper.Point({
+        angle: ship.angle,
+        length: (SHIP_SIZE / 2) - 3
+    });
+
+    var pos = ship.item.position.add(shot_offset);
+
+    // Calculate the direction and speed the shot is going
     var vec = new paper.Point({
-        angle: args.angle,
+        angle: ship.angle,
         length: SHOT_SPEED
     });
 
-    //console.log('shot start pos: ' + pos.x + ', ' + pos.y);
+    // Factor in some of the ships movement speed
+    vec = vec.add(ship.vector.multiply(SHOT_INHERIT_FACTOR));
 
-    function checkHits(bullet) {
-        for (var r = 0; r < Rocks.children.length; r++) {
-            var rock = Rocks.children[r];
-            if (rock.bounds.contains(bullet.position)) {
-                Score.update(rock.shapeType);
-                Rocks.explode(rock);
-                if (rock.shapeType < Rocks.TYPE_SMALL) {
-                    for (var j = 0; j < 2; j++) {
-                        Rocks.add(1, rock.shapeType + 4, rock.position);
-                    }
-                }
-                rock.remove();
-                bullet.remove();
-            }
-        }
-    }
+    //console.log(pos);
+    io.emit('shot added', {
+        color: ship.color,
+        x: Math.round(pos.x),
+        y: Math.round(pos.y),
+        angle: ship.angle,
+        vx: vec.x,
+        vy: vec.y
+    });
+
+    //console.log('shot start pos: ' + pos.x + ', ' + pos.y);
+    //console.log(vec);
 
     return {
 
-        owner: args.owner,
-        color: args.color,
+        owner: ship.id,
+        color: ship.color,
         position: pos,
-        angle: args.angle,
+        angle: ship.angle,
 
         vector: vec,
         bullet: new paper.Path.Circle({
             applyMatrix: true,
             center: pos.add(vec),
             radius: 0.5,
-            fillColor: args.color,
-            strokeColor: args.color,
+            fillColor: ship.color,
+            strokeColor: ship.color,
             strokeWidth: 0,
             data: {
                 vector: vec,
                 timeToDie: SHOT_LIFESPAN
             }
-        })
-        ,
+        }),
+
         expired: function () {
             return this.bullet.data.timeToDie < 1;
         },
+
         move: function () {
 
             this.bullet.data.timeToDie--;

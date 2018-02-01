@@ -95,25 +95,21 @@ socket.on('ships position', function (ships_positions) {
     });
 });
 
-socket.on('shot added', function (shipid) {
+socket.on('shot added', function (shotdata) {
     //console.log('shot added');
     var shooter;
-    client.ships.forEach(function (ship) {
-        if (shipid === ship.id) {
-            shooter = ship;
-        }
-    });
+
 
     var vector = new Point({
-        angle: shooter.angle,
+        angle: shotdata.angle,
         length: (SHIP_SIZE / 2) - 3
     });
 
     var shot = {
-        owner: shooter.id,
-        color: shooter.color,
-        position: shooter.position.add(vector),
-        angle: shooter.angle
+        color: shotdata.color,
+        position: new Point(shotdata.x, shotdata.y),
+        angle: shotdata.angle,
+        vector: new Point(shotdata.vx, shotdata.vy)
     };
 
     client.shots.push(new Shot(shot));
@@ -1145,34 +1141,18 @@ function Ship(options) {
 
 function Shot(args) {
     //var group = new paper.Group();
+/*
+    color: shotdata.color,
+        position: shotdata.position,
+        angle: shotdata.angle,
+        vector: shotdata.vector
+  */
     var pos = args.position;
-    var vec = new paper.Point({
-        angle: args.angle,
-        length: SHOT_SPEED
-    });
-    //console.log(args);
-    //console.log('shot start pos: ' + pos.x + ', ' + pos.y);
-
-    function checkHits(bullet) {
-        for (var r = 0; r < Rocks.children.length; r++) {
-            var rock = Rocks.children[r];
-            if (rock.bounds.contains(bullet.position)) {
-                Score.update(rock.shapeType);
-                Rocks.explode(rock);
-                if (rock.shapeType < Rocks.TYPE_SMALL) {
-                    for (var j = 0; j < 2; j++) {
-                        Rocks.add(1, rock.shapeType + 4, rock.position);
-                    }
-                }
-                rock.remove();
-                bullet.remove();
-            }
-        }
-    }
+    console.log(pos);
+    var vec = args.vector;
 
     return {
 
-        owner: args.owner,
         color: args.color,
         position: pos,
         angle: args.angle,
