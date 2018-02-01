@@ -675,7 +675,7 @@ $(document).ready(function () {
     $(document).keydown(function (e) {
         if (e.key === 'F8') {
             $('#setup').fadeToggle(200);
-            $('#scoreboard').fadeToggle(200);
+            $('#gameinfo').fadeToggle(200);
         }
     });
 
