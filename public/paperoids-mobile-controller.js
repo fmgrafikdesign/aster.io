@@ -23,13 +23,16 @@ gn.init(args).then(function () {
     if (!isAvailable.deviceOrientationAvailable) {
         logger({message: 'Device orientation is not available.'});
         var $error = $('#error');
-
-            $error.html('Hey, I\'m sorry but it looks like your device does not support motion controls.');
-            $error.fadeIn(100);
-
+        console.log('fading in');
+        $error.html('Hey, I\'m sorry but it looks like your device does not support motion controls.');
+        $error.fadeIn(100);
 
     } else {
-        $('#setup').fadeIn(100);
+        $('#setup').removeClass('hidden');
+    }
+
+    if(isAvailable.deviceOrientationAvailable) {
+        $('#setup').removeClass('hidden');
     }
 
     if (!isAvailable.accelerationAvailable) {
@@ -117,7 +120,10 @@ socket.on('acknowledge new player', function (info) {
 
 var ping = setInterval(function() {
     //console.log('keepalive sent');
-    socket.emit('keepalive');
+    if(ifvisible.now()) {
+        //console.log('keepalive sent');
+        socket.emit('keepalive');
+    }
 }, 1650);
 
 
@@ -126,20 +132,8 @@ player = {
     color: '#ff0000',
 };
 
-function toggleFullScreen() {
-    var doc = window.document;
-    var docEl = doc.documentElement;
-
-    var requestFullScreen = docEl.requestFullscreen || docEl.mozRequestFullScreen || docEl.webkitRequestFullScreen || docEl.msRequestFullscreen;
-    var cancelFullScreen = doc.exitFullscreen || doc.mozCancelFullScreen || doc.webkitExitFullscreen || doc.msExitFullscreen;
-
-    if (!doc.fullscreenElement && !doc.mozFullScreenElement && !doc.webkitFullscreenElement && !doc.msFullscreenElement) {
-        requestFullScreen.call(docEl);
-    }
-    else {
-        cancelFullScreen.call(doc);
-    }
-}
+/* Check if window is in focus */
+var focus = true;
 
 function getRandomColor() {
     var letters = '0123456789ABCDEF'.split('');

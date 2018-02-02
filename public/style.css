@@ -227,6 +227,11 @@ textarea:focus, input:focus, button:focus{
     align-items: center;
 }
 
+.hidden {
+    opacity: 0;
+    transition: opacity .3s ease;
+}
+
 .d-none {
     display: none;
 }

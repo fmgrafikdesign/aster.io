@@ -56,7 +56,7 @@ var SHIP_RESPAWN_TIME = 2000; // in milliseconds
 var SHIP_SPAWN_PROTECTION = 3000; // in milliseconds
 
 var POINTS_PER_KILL = 100;
-var POINTS_PER_DEATH = -50;
+var POINTS_PER_DEATH = -20;
 var POINTS_PER_ASTEROID = 10;
 
 var map_width = 1920;
