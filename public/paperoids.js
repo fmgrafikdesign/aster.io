@@ -19,6 +19,7 @@ var STARS_AMOUNT = 400;
 var STARS_SIZE = 2;
 
 var SHOW_PLAYERNAMES = true;
+var SHOW_PROMPT = true;
 
 var REMAINING_TIME = 0;
 
@@ -78,6 +79,8 @@ socket.on('game state ships', function (ships) {
         //console.log(ship.group);
         //var group = new Group(ship.group);
     });
+
+    updatePrompt();
 });
 
 socket.on('game add player', function (ship) {
@@ -151,6 +154,8 @@ function addShip(ship, spawnprotection) {
 
     //var path = new Path([-10, -8], [10, 0], [-10, 8], [-8, 4], [-8, -4]);
     //ship.group = new Group().importJSON(ship.group);
+
+    updatePrompt();
 }
 
 
@@ -175,6 +180,8 @@ function removePlayer(id) {
             console.log('player "' + socket.id + '" disconnected.');
         }
     })
+
+    updatePrompt();
 }
 
 function removePlayers() {
@@ -185,6 +192,18 @@ function removePlayers() {
     });
 
     client.ships = [];
+
+    updatePrompt();
+}
+
+function updatePrompt() {
+    if(!SHOW_PROMPT) return;
+
+    if(client.ships.length === 0) {
+        $('#prompt').fadeIn(200);
+    } else {
+        $('#prompt').fadeOut(200);
+    }
 }
 
 function removeShots(id) {
@@ -688,6 +707,7 @@ $(document).ready(function () {
         if (e.key === 'F8') {
             $('#setup').fadeToggle(200);
             $('#gameinfo').fadeToggle(200);
+            $('#prompt').toggleClass('d-none');
         }
     });
 
