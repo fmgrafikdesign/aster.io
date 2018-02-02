@@ -68,6 +68,8 @@ var GAME_ROUND_INBETWEEN = 16 * 1000 // Time between two rounds (in Milliseconds
 var GAME_ROUND_START_TIMESTAMP = 0;
 var GAME_ROUND_END_TIMESTAMP = 0;
 
+var CLIENT_TIMEOUT_PERIOD = 10000;
+
 var UP = 0;
 var RIGHT = 1;
 var DOWN = 2;
@@ -295,6 +297,9 @@ io.on('connection', function (socket) {
         // Track last shots to enforce delay between shots
         game.canshoot[socket.id] = true;
 
+        // Initialize timeout
+        game.keepalive[socket.id] = true;
+
         // Add player to scoreboard
         score.addPlayer(socket.id, player.name, color);
 
@@ -310,6 +315,12 @@ io.on('connection', function (socket) {
         io.emit('game add player', serializeShip(client_ship));
         //console.log(ship.group);
 
+    });
+
+    // Received keepalive: Refresh client timeout
+    socket.on('keepalive', function() {
+        game.keepalive[socket.id] = true;
+        //console.log(socket.id + ' sent keepalive');
     });
 
     socket.on('player movement', function (dir) {
@@ -370,13 +381,52 @@ io.on('connection', function (socket) {
 
     socket.on('disconnect', function () {
         // Delete player stuff
-        game.removeShip(socket.id);
-        game.removeShots(socket.id);
-        score.removePlayer(socket.id);
-        io.emit('player disconnected', socket.id);
-        console.log('player "' + socket.id + '" disconnected.');
+        removePlayer(socket.id);
     })
+
+    setInterval(function() {
+        socket.emit('h')
+    }, 2000);
 });
+
+
+var checkClientTimeouts = function() {
+
+    //console.log('checking for timeouts...');
+    // Loop through players stored in keepalive
+    //console.log(game.keepalive);
+    for(var key in game.keepalive) {
+        if(game.keepalive.hasOwnProperty(key)) {
+
+            // If client hasn't send a heartbeat, kick them out
+            if(!game.keepalive[key]) {
+                console.log('removing player ' + key + ' because he did not send a heartbeat in time');
+                removePlayer(key);
+            }
+
+            else {
+                // Set all heartbeats to false
+                game.keepalive[key] = false;
+            }
+        }
+    }
+
+};
+
+var timeouts = setInterval(checkClientTimeouts, CLIENT_TIMEOUT_PERIOD);
+
+/* TODO In Gameserver verschieben */
+
+function removePlayer(id) {
+    game.removeShip(id);
+    game.removeShots(id);
+    score.removePlayer(id);
+    delete game.keepalive[id];
+    //console.log(game.keepalive);
+    delete game.canshoot[id];
+    io.emit('player disconnected', id);
+    console.log('player "' + id + '" disconnected.');
+}
 
 function GameServer() {
     // ships obj: id, color, movement, pos.x, pos.y, pos.angle
@@ -385,6 +435,7 @@ function GameServer() {
     // shots obj: owner-id, color, pos.x, pos.y, angle
     this.shots = [];
     this.canshoot = {};
+    this.keepalive = {};
 
     this.lastShotId = 0;
 
@@ -460,7 +511,7 @@ GameServer.prototype = {
                     ship.movement.right = move;
                 } else if (dir === FIRE && move && game.canshoot[ship.id]) {
                     ship.movement.shooting = move;
-                    console.log('adding shot');
+                    //console.log('adding shot');
                     game.addShot(ship);
                     game.canshoot[ship.id] = false;
 

@@ -216,7 +216,7 @@ textarea:focus, input:focus, button:focus{
     outline: none;
 }
 
-#setup {
+.setup {
     display: -webkit-box;
     display: -webkit-flex;
     display: -ms-flexbox;
@@ -255,6 +255,12 @@ textarea:focus, input:focus, button:focus{
 
 #waiting-for-players {
     width: 100%;
+}
+
+.error {
+    margin-top: 200px;
+    font-size: 24px;
+    font-weight: 300;
 }
 
 .scoreboard span {

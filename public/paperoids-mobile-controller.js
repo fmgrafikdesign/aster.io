@@ -22,6 +22,14 @@ gn.init(args).then(function () {
     var isAvailable = gn.isAvailable();
     if (!isAvailable.deviceOrientationAvailable) {
         logger({message: 'Device orientation is not available.'});
+        var $error = $('#error');
+
+            $error.html('Hey, I\'m sorry but it looks like your device does not support motion controls.');
+            $error.fadeIn(100);
+
+
+    } else {
+        $('#setup').fadeIn(100);
     }
 
     if (!isAvailable.accelerationAvailable) {
@@ -106,6 +114,11 @@ socket.on('acknowledge new player', function (info) {
         $('#controller').fadeIn(200);
     });
 });
+
+var ping = setInterval(function() {
+    //console.log('keepalive sent');
+    socket.emit('keepalive');
+}, 1650);
 
 
 player = {

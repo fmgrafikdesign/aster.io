@@ -10,6 +10,9 @@ var SHIP_RESPAWN_TIME = 2000;
 var SHIP_SPAWN_PROTECTION = 3000;
 var SHIP_SIZE = 48;
 
+var SERVER_TIMEOUT_PERIOD = 10000;
+var pingreceived = false;
+
 var RENDER_STARS = false;
 var ANIMATE_STARS = false;
 var STARS_AMOUNT = 400;
@@ -126,9 +129,13 @@ socket.on('ship destroyed', function (data) {
 });
 
 socket.on('disconnect', function() {
+    disconnected();
+});
+
+function disconnected() {
     console.log('lost connection to server, trying to reload...');
     location.reload();
-});
+}
 
 function addShip(ship, spawnprotection) {
     //console.log('added new ship for new player');
@@ -150,6 +157,11 @@ function addShip(ship, spawnprotection) {
 socket.on('player disconnected', function (id) {
     //console.log(id);
     removePlayer(id);
+});
+
+socket.on('h', function() {
+    //console.log('received server ping');
+    pingreceived = true;
 });
 
 function removePlayer(id) {
@@ -699,6 +711,23 @@ $(document).ready(function () {
         updatePlayer(player);
     });
 
+    var ping = setInterval(function() {
+        //console.log('keepalive sent');
+        socket.emit('keepalive');
+    }, 1650);
+
+    var checkServerTimeout = function() {
+
+        // Loop through players stored in keepalive
+        if(!pingreceived) {
+            disconnected();
+        }
+
+        pinreceived = false;
+    };
+
+    var serverTimeout = setInterval(checkServerTimeout, SERVER_TIMEOUT_PERIOD);
+
     /*
     socket.on('gameinfo', function (text) {
         $('#gameinfo').html(text);
@@ -1061,7 +1090,7 @@ function Ship(options) {
 
         destroy: function () {
             var ship = this;
-            console.log('destroy called');
+            //console.log('destroy called');
             ship.destroyedShip = assets.destroyedShip.clone();
             ship.destroyedShip.position = this.item.position;
             ship.destroyedShip.visible = true;
@@ -1079,7 +1108,7 @@ function Ship(options) {
 
         respawn: function () {
 
-            console.log('respawn called');
+            //console.log('respawn called');
             var ship = this;
             ship.item.visible = true;
             ship.playername.visible = true;
@@ -1116,7 +1145,7 @@ function Ship(options) {
             // between bounding rect of rocks and ship
 
             if (this.dying) {
-                console.log('dieing');
+                //console.log('dieing');
                 var children = this.destroyedShip.children;
                 children[0].position.x++;
                 children[1].position.x--;
@@ -1148,7 +1177,7 @@ function Shot(args) {
         vector: shotdata.vector
   */
     var pos = args.position;
-    console.log(pos);
+    //console.log(pos);
     var vec = args.vector;
 
     return {
