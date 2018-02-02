@@ -24,7 +24,7 @@ gn.init(args).then(function () {
         logger({message: 'Device orientation is not available.'});
         var $error = $('#error');
         console.log('fading in');
-        $error.html('Hey, I\'m sorry but it looks like your device does not support motion controls.');
+        $error.html('Motion controls not available in this phone.');
         $error.fadeIn(100);
 
     } else {
