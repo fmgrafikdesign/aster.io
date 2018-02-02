@@ -814,7 +814,7 @@ $(document).ready(function () {
         $('#' + id).remove();
 
         if (scoreboard.children().length === 0) {
-            scoreboard.append('<span id="waiting-for-players">Waiting for players...</span>');
+            scoreboard.append('<span id="waiting-for-players">Visit "asterio.space" on your phone to play!</span>');
         }
     }
 
