@@ -823,7 +823,6 @@ $(document).ready(function () {
         var kills = '<span class="scoreboard-kills">' + player.kills + '</span>';
         var deaths = '<span class="scoreboard-deaths">' + player.deaths + '</span>';
         var endhtml = '</div>';
-        $('#waiting-for-players').remove();
         scoreboard.append(starthtml + name + points + kills + deaths + endhtml);
 
         sortScoreboard();
