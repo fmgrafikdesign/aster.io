@@ -1,10 +1,13 @@
 {
   "name": "socket-chat-example",
   "version": "0.0.1",
-  "description": "my first socket.io app",
+  "description": "A paperoids multiplayer clone",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fmgrafikdesign/aster.io"
+  },
   "dependencies": {
     "express": "^4.16.2",
-    "gulp": "^3.9.1",
     "gyronorm": "^2.0.6",
     "jquery-colpick": "^3.1.0",
     "paper": "^0.11.5",
