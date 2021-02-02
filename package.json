@@ -1,7 +1,7 @@
 {
-  "name": "socket-chat-example",
+  "name": "aster-io",
   "version": "0.0.1",
-  "description": "A paperoids multiplayer clone",
+  "description": "An asteroids multiplayer clone, based on David Hirmes paperoids.",
   "repository": {
     "type": "git",
     "url": "https://github.com/fmgrafikdesign/aster.io"

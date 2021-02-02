@@ -7,7 +7,7 @@ var paper = require('paper');
 
 // Use this port for the webserver, as per uberspace guidelines
 // https://wiki.uberspace.de/system:ports
-var port = 61161;
+var port = process.env.$PORT || 61161;
 
 try {
     console.log(require.resolve("paper"));
