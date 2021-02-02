@@ -1,13 +1,10 @@
 var app = require('express')();
 var express = require('express');
 var http = require('http').Server(app);
-//require('jquery-colpick');
 var io = require('socket.io')(http);
 var paper = require('paper');
 
-// Use this port for the webserver, as per uberspace guidelines
-// https://wiki.uberspace.de/system:ports
-var port = process.env.$PORT || 61161;
+var port = process.env.PORT || 61161;
 
 try {
     console.log(require.resolve("paper"));
